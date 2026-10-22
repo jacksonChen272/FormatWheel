@@ -1,7 +1,12 @@
-# Windows 0.2.1 validation — 2026-10-23 (Asia/Shanghai)
+# Windows 0.2.2 validation — 2026-10-23 (Asia/Shanghai)
 
 Independent Windows x64 preview. Upstream baseline: `1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`. Original MIT attribution and Swift source preserved.
 
+## 0.2.2 tour layout
+
+The only behavior change is onboarding layout: 1180 × 790 default window, 660 × 660 practice canvas, wider spotlight padding, separate sample-file/tray positions, a circular center spotlight, and scrollable explanatory text with navigation kept outside the scroll region. The previous 0.2.1 sound and conversion changes remain unchanged.
+
+Computer Use inspected all eight English steps, including the wider opening frame, sample file, JPG/tools focus, center and tray. Traditional and Simplified Chinese use the same layout. Build and the existing standalone self-test are rerun for the release; no new tests that merely repeat layout constants were added. The detailed 0.2.1 and 0.2.0 results below retain their original scope.
 ## 0.2.1 feedback regression checks
 
 - Added six regressions: enter/leave/re-entry with one tick per transition; page changes, empty and unavailable options; hint bounds for all eight directions at four DPI scales and five wheel positions; valid, non-silent, distinct PCM cues; serialized opening/hover playback with bounded hover backlog; mute and pending-hover cancellation.

@@ -1,6 +1,6 @@
-# FormatWheel for Windows — 0.2.1 preview
+# FormatWheel for Windows — 0.2.2 preview
 
-**[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/tag/windows-v0.2.1)**
+**[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/latest)**
 
 English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET installation is needed. On first launch, choose English / 繁體中文 / 简体中文, optionally install FFmpeg and LibreOffice, then follow the eight-step tour. Right-click the tray icon (or home window) to install tools later; the tray menu also offers language selection and tour replay/reset. The EXE is unsigned. This is an independent community Windows preview, not an official upstream release.
 
@@ -8,6 +8,16 @@ English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET ins
 
 基於 [Elise616/FormatWheel](https://github.com/Elise616/FormatWheel) 的獨立 Windows 移植。原始基準：`1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`。原版 MIT 版權聲明完整保留。此版本不是原作者官方 Windows 發行，也不宣稱 100% 相同。
 
+## 0.2.2 教學排版 / Roomier quick tour
+
+- 教學視窗加闊，左側示範區由 520 × 580 增至 660 × 660，保留輪盤大小並增加藍框四周留白。
+- 範例檔案、輪盤及系統匣示意拉開距離；各步驟聚光框跟隨新位置，避免壓住圖示和文字。
+- 右側說明增加段落間距，小視窗可捲動文字，導覽按鈕保持可見。繁體／簡體／英文沿用相同寬鬆排版。
+- 此版發布為 GitHub Latest，下載連結可直接取得最新版。更新時先從系統匣結束舊版。
+
+English: A wider tour window, a larger practice canvas, more space inside the blue spotlight and between the sample file, wheel and tray. Text can scroll on smaller windows while navigation stays visible.
+
+简体中文：加宽新手教学窗口及演示区域，增加蓝框内留白，拉开示例文件、轮盘及托盘示意的距离。小窗口可滚动说明，导航按钮保持可见。
 ## 0.2.1 修正 / Feedback fixes
 
 - 開啟輪盤、切換選項及翻頁都有各自的音效。音效在背景依序播放，快速移動不會切斷開啟音效；同一選項不會因滑鼠微動而連續發聲。系統匣的音效開關仍有效。
