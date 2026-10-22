@@ -6,4 +6,6 @@ screenshots/
 Windows/bin/
 Windows/obj/
 Windows/publish/
+Windows/standalone/
+Windows/release/
 Windows/test-results/

@@ -1,10 +1,20 @@
-# FormatWheel for Windows — 0.1.0 preview
+# FormatWheel for Windows — 0.2.0 preview
+
+**[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/tag/windows-v0.2.0)**
+
+English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET installation is needed. On first launch, choose English / 繁體中文 / 简体中文, optionally install FFmpeg and LibreOffice, then follow the eight-step tour. Right-click the tray icon (or home window) to install tools later; the tray menu also offers language selection and tour replay/reset. The EXE is unsigned. This is an independent community Windows preview, not an official upstream release.
+
+简体中文：下载 `FormatWheel-Windows-x64.exe` 后直接打开，无需另装 .NET。首次启动可切换语言、选择安装 FFmpeg / LibreOffice，并观看新手教学。暂时跳过后，也可右键点击系统托盘图标补装或重看教学。
 
 基於 [Elise616/FormatWheel](https://github.com/Elise616/FormatWheel) 的獨立 Windows 移植。原始基準：`1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`。原版 MIT 版權聲明完整保留。此版本不是原作者官方 Windows 發行，也不宣稱 100% 相同。
 
 ## 使用
 
-Windows 10 2004（19041）或更新版本，x64。解壓完整資料夾，開啟 `FormatWheel.exe`。可攜式發行包含 .NET runtime，不必另裝 .NET 或使用管理員權限。請保留同資料夾內的 DLL、模型與授權檔。
+Windows 10 2004（19041）或更新版本，x64。下載單檔 `FormatWheel-Windows-x64.exe` 即可開啟，不必另裝 .NET。第一次執行會在使用者資料夾解開內建模型及資源；.NET 原生程式庫快取在 Windows 暫存資料夾。另提供完整 ZIP，可解壓後開啟 `FormatWheel.exe`；ZIP 版本須保留隨附檔案。
+
+首次開啟會詢問是否安裝 FFmpeg／LibreOffice，可分別勾選或暫時略過。程式會下載、核對固定 SHA-256、安裝到 `%LOCALAPPDATA%\FormatWheel\tools`，再實際啟動工具檢查。安裝為使用者私有副本，不變更預設文件關聯、不替換已有的 LibreOffice、不需要系統管理員安裝。企業政策或網路限制可能造成失敗，畫面會顯示原因並保留重試入口；解壓／驗證階段須等候完成，下載階段可取消。
+
+接著會顯示八步新手教學，支援上一步／下一步／跳過與左右方向鍵／Esc。右鍵系統匣圖示可重播或設定下次啟動重播。繁體中文、簡體中文、英文可在主畫面及系統匣切換，設定會記住。
 
 1. 在桌面或檔案總管拖住檔案，按一下 Shift。
 2. 朝輪盤上的格式方向移動，放開滑鼠轉換。中心放開取消。
@@ -19,11 +29,11 @@ Windows 10 2004（19041）或更新版本，x64。解壓完整資料夾，開啟
 - 內建離線 U²-Net 小型模型去背，無需 Python。辨識品質與 Apple Vision 不同。
 - OCR 使用 Windows 的本機 OCR 語言。繁體、簡體或英文辨識取決於 Windows 已安裝的語言套件。
 - PDF 轉圖、長圖、拆分、合併、旋轉、文字提取與去除文件屬性已內建。
-- 影音功能使用 `ffmpeg.exe`；影片隱私檢查另用 `ffprobe.exe`。支援 PATH 或 `tools/ffmpeg/bin/`。可執行隨附 `setup-media.ps1`，只會下載並解壓至本程式資料夾，不修改系統 PATH。
-- 完整 DOC/DOCX/ODT/RTF/PDF 文件互轉需要 [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/)。偵測預設安裝目錄或 PATH 裡的 `soffice.exe`。純文字與 DOCX 提取、DOCX 去隱私不用安裝 Office。
+- 影音功能使用 `ffmpeg.exe`；影片隱私檢查另用 `ffprobe.exe`。右鍵 → 安裝轉換工具會下載 Gyan.dev 的 FFmpeg 9.0.2，保留上游完整授權與文件。也支援既有 PATH 或 `tools/ffmpeg/bin/`。
+- 完整 DOC/DOCX/ODT/RTF 文件轉換需要 [LibreOffice](https://www.libreoffice.org/download/)。內建安裝器取得官方 26.8.1 MSI，使用 Windows Installer `/a` 建立私有執行副本並保留附帶的 VC runtime、授權及文件。也偵測既有系統安裝或 PATH 中的 `soffice.com` / `soffice.exe`。純文字與 DOCX 提取、DOCX 去隱私不用安裝 Office。PDF 轉文件仍是文字提取，見下方限制。
 - ZIP、複製路徑／檔名、SHA-256 已內建。
 
-程式本身不發送檔案、不收集遙測，也不自動下載工具或模型。`setup-media.ps1` 和原始碼建置需要網路。設定與操作記錄在 `%LOCALAPPDATA%\FormatWheel`。登入啟動預設關閉，僅使用者開啟設定後寫入 HKCU Run。
+轉換不發送檔案、不收集遙測。只有按下安裝才會連線下載工具；去背模型已內建。設定與操作記錄在 `%LOCALAPPDATA%\FormatWheel`。登入啟動預設關閉，僅使用者開啟設定後寫入 HKCU Run。右鍵「開源授權與來源」可查看內嵌的授權文件。刪除下載的 EXE 及上述私有資料夾可移除程式與工具；如果曾開啟登入啟動，先將它關閉。
 
 ## 與 macOS 的已知差異
 
@@ -34,7 +44,8 @@ Windows 10 2004（19041）或更新版本，x64。解壓完整資料夾，開啟
 - 圖片去隱私會重新編碼。PDF 去隱私移除文件資訊與文件／頁面 XMP；DOCX 去隱私移除作者等屬性。這些功能不刪除正文、註解、附件、修訂內容或像素中的個資，不代表匿名化。
 - 影片去隱私清除容器／串流 metadata 與章節；不保證清除所有編碼器特有標記。
 - 長圖每段最多 15,000 像素；GIF 輸出為單張圖，圖片動畫不保證保留。去背與轉換結果可能與原版不同。
-- 尚未實測 LibreOffice 整合、ARM64／x86、程式簽章及正式安裝器。本發行為 x64 預覽版。
+- 已驗證 LibreOffice PDF、DOCX、RTF、ODT、DOC 輸出及文字讀回。ARM64／x86 不支援，本版沒有程式碼簽章；Windows 可能顯示未知發行者。此發行為 x64 預覽版。
+- 本次測試環境只有一個啟用中的螢幕。四種 DPI 的邊界計算通過自動測試，實際雙螢幕與混合 DPI 的跨螢幕拖曳仍未驗證。Computer Use API 不提供「維持拖曳同時按 Shift」的組合操作，全域手勢的完整端到端驗證仍待實體操作；已測試觸發狀態與輪盤點選轉換。
 
 ## 建置與測試
 
@@ -43,15 +54,17 @@ Windows 10 2004（19041）或更新版本，x64。解壓完整資料夾，開啟
 ```powershell
 dotnet build -c Release
 ./build.ps1
-# 輸出 publish/FormatWheel.exe
+# 輸出 publish/FormatWheel.exe、release/FormatWheel-Windows-x64.exe 及 ZIP
 ./publish/FormatWheel.exe --self-test ./test-results
-# 有 FFmpeg 在 PATH 時會額外測試影音功能
+# 偵測到 FFmpeg / LibreOffice 時會額外測試影音／文件功能
 ./publish/FormatWheel.exe --run img.to.png C:\path\photo.heic
 ./publish/FormatWheel.exe --ids actions.json
 ./publish/FormatWheel.exe --snapshot preview.png
 ```
 
 CLI 轉換結果寫入程式目錄的 `last-result.json`，失敗寫入 `last-error.txt` 並返回非零結束碼。自我測試輸出 `report.json`，測試素材只在指定目錄建立。
+
+開發測試可設定 `FORMATWHEEL_DATA` 為絕對路徑，以隔離首次啟動狀態與工具。`--install-test ffmpeg` / `--install-test libreoffice` 執行同一套下載安裝流程；可再傳入本機套件路徑，但仍必須通過固定 SHA-256 校驗。這些測試命令不會自動發布任何內容。
 
 ## 授權與來源
 

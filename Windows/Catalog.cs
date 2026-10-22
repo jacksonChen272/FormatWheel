@@ -5,18 +5,21 @@ using System.Collections.Generic;
 
 namespace FormatWheel;
 
-public record ActionItem(string Id, string Label, string Detail, string Ammo = "")
+public record ActionItem(string Id, string RawLabel, string RawDetail, string RawAmmo = "")
 {
+    public string Label => L.T(RawLabel);
+    public string Detail => L.T(RawDetail);
+    public string Ammo => L.T(RawAmmo);
     public string? Unavailable(string[] files)
     {
-        if (Id == "pdf.merge" && files.Length < 2) return "請同時拖入兩個以上 PDF";
-        if (Id == "doc.strip" && files.Any(f => Path.GetExtension(f).ToLowerInvariant() != ".docx")) return "僅支援 DOCX";
-        if (Id == "gen.sha" && files.Any(Directory.Exists)) return "請選擇檔案，不包含資料夾";
+        if (Id == "pdf.merge" && files.Length < 2) return L.T("請同時拖入兩個以上 PDF");
+        if (Id == "doc.strip" && files.Any(f => Path.GetExtension(f).ToLowerInvariant() != ".docx")) return L.T("僅支援 DOCX");
+        if (Id == "gen.sha" && files.Any(Directory.Exists)) return L.T("請選擇檔案，不包含資料夾");
         if (Id.StartsWith("vid.") || Id.StartsWith("aud."))
-            if (Tool.Find("ffmpeg") == null) return "未裝備：請安裝 FFmpeg，或放入 tools/ffmpeg/";
-        if (Id == "img.cutout" && !File.Exists(Path.Combine(AppContext.BaseDirectory,"u2netp.onnx"))) return "未裝備：缺少 u2netp.onnx 模型";
+            if (Tool.Find("ffmpeg") == null) return L.T("未裝備：請安裝 FFmpeg，或放入 tools/ffmpeg/");
+        if (Id == "img.cutout" && !File.Exists(Assets.File("u2netp.onnx"))) return L.T("未裝備：缺少 u2netp.onnx 模型");
         if (Id.StartsWith("doc.to.") && Tool.Find("soffice") == null && !new[]{"txt","md","html"}.Contains(Id.Split('.').Last()))
-            return "未裝備：需要 LibreOffice";
+            return L.T("未裝備：需要 LibreOffice");
         return null;
     }
 }
@@ -34,7 +37,7 @@ public static class Catalog
         if ("txt md markdown html htm rtf doc docx odt".Split(' ').Contains(e)) return "doc";
         return "gen";
     }
-    public static string Name(string kind) => kind switch {"img"=>"圖片", "pdf"=>"PDF", "vid"=>"影片", "aud"=>"音訊", "doc"=>"文件", _=>"檔案"};
+    public static string Name(string kind) => kind switch {"img"=>L.T("圖片"), "pdf"=>"PDF", "vid"=>L.T("影片"), "aud"=>L.T("音訊"), "doc"=>L.T("文件"), _=>L.T("檔案")};
     public static readonly Dictionary<string, ActionItem> All = new();
     static ActionItem A(string id,string label,string detail,string ammo="") { var a=new ActionItem(id,label,detail,ammo); All[id]=a; return a; }
     static ActionItem?[] Formats(string kind, string list, string[] descriptions, string[]? ammo=null) => list.Split(' ').Select((f,i)=>(ActionItem?)A(kind+".to."+f, f.ToUpperInvariant(), descriptions[i], ammo?[i]??"轉換")).ToArray();

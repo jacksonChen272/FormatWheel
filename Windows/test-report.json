@@ -1,5 +1,5 @@
 {
-  "passed": 58,
+  "passed": 76,
   "failed": 0,
   "checks": [
     {
@@ -232,6 +232,78 @@
     },
     {
       "name": "aud.fast",
+      "status": "PASS"
+    },
+    {
+      "name": "english-action-coverage",
+      "status": "PASS"
+    },
+    {
+      "name": "language-switch-without-restart",
+      "status": "PASS"
+    },
+    {
+      "name": "language-detection",
+      "status": "PASS"
+    },
+    {
+      "name": "simplified-text-termination",
+      "status": "PASS"
+    },
+    {
+      "name": "installer-rejects-corrupt-download",
+      "status": "PASS"
+    },
+    {
+      "name": "installer-hash-verification",
+      "status": "PASS"
+    },
+    {
+      "name": "installer-cancellation",
+      "status": "PASS"
+    },
+    {
+      "name": "first-run-settings-roundtrip",
+      "status": "PASS"
+    },
+    {
+      "name": "drag-trigger-and-reset",
+      "status": "PASS"
+    },
+    {
+      "name": "wheel-placement-dpi-1",
+      "status": "PASS"
+    },
+    {
+      "name": "wheel-placement-dpi-1.25",
+      "status": "PASS"
+    },
+    {
+      "name": "wheel-placement-dpi-1.5",
+      "status": "PASS"
+    },
+    {
+      "name": "wheel-placement-dpi-2",
+      "status": "PASS"
+    },
+    {
+      "name": "libreoffice-pdf",
+      "status": "PASS"
+    },
+    {
+      "name": "libreoffice-docx",
+      "status": "PASS"
+    },
+    {
+      "name": "libreoffice-rtf",
+      "status": "PASS"
+    },
+    {
+      "name": "libreoffice-odt",
+      "status": "PASS"
+    },
+    {
+      "name": "libreoffice-doc",
       "status": "PASS"
     }
   ]

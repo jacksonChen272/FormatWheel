@@ -18,7 +18,15 @@ jobs:
       - name: Build portable x64 app
         shell: pwsh
         run: ./Windows/build.ps1
+      - name: Verify standalone EXE
+        shell: pwsh
+        run: |
+          $env:FORMATWHEEL_DATA = Join-Path $env:RUNNER_TEMP 'FormatWheel-tests'
+          $report = Join-Path $env:RUNNER_TEMP 'FormatWheel-results'
+          $p = Start-Process ./Windows/release/FormatWheel-Windows-x64.exe -ArgumentList @('--self-test', ('"'+$report+'"')) -Wait -PassThru -WindowStyle Hidden
+          Get-Content (Join-Path $report 'report.json')
+          if ($p.ExitCode -ne 0) { throw "Self-test exited $($p.ExitCode)" }
       - uses: actions/upload-artifact@v4
         with:
-          name: FormatWheel-Windows-x64-preview
-          path: Windows/publish/
+          name: FormatWheel-Windows-x64
+          path: Windows/release/
