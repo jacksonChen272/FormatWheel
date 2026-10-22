@@ -37,7 +37,9 @@ Use a new results folder for each run. Test fixtures are generated; no personal 
 
 Observed first-run optional install prompt, selected checkboxes, English/Traditional/Simplified UI, skip leading to tour, Esc skipping tour, persisted first-run flags, subsequent launch going to home, home right-click opening Conversion tools, and the one-click installer downloading sequentially with progress and disabled controls.
 
-Full two-tool UI installation completion and the complete tour sequence are being checked before publication; final results will be recorded here.
+- **Actual one-click UI installation passed:** selected both tools once; FFmpeg and LibreOffice downloaded sequentially, were checksum-verified, extracted, and passed executable checks. The dialog reached 100% and displayed success. MSI log exit code 0. All tool files remained in isolated test data, with no manual terminal steps or UAC prompts during this user flow.
+- Inspected all eight tutorial steps on the desktop. Spotlights followed the sample file, wheel, JPG choice, tools page, center and tray illustration. Left/right keys, Back/Next, disabled Back on the first step, final Done and Esc/skip worked. Clicking the practice JPG did not start a conversion. The practice page switched to tools for its corresponding step.
+- GitHub Actions build and standalone-EXE verification passed for implementation commit `e76c7b8c3a6861d92d54164e3a1dc5411accb0a7`: https://github.com/rickuuyu-create/FormatWheel/actions/runs/39830380389 . Optional tool conversions were verified locally; CI checks depend on engines available on the runner.
 
 ## NOT VERIFIED
 
