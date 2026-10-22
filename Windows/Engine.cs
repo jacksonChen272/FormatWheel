@@ -40,7 +40,23 @@ public static class Engine
             {
                 string zip=Path.Combine(tmp,"archive.zip");
                 using(var z=ZipFile.Open(zip,ZipArchiveMode.Create)) {var names=new HashSet<string>(StringComparer.OrdinalIgnoreCase);foreach(var f in files){cancel.ThrowIfCancellationRequested();var root=Path.GetFileName(f.TrimEnd(Path.DirectorySeparatorChar));var basename=root;int n=2;while(!names.Add(root))root=basename+" ("+n+++")";
-                    if(Directory.Exists(f)){foreach(var child in Directory.EnumerateFiles(f,"*",new EnumerationOptions{RecurseSubdirectories=true,AttributesToSkip=System.IO.FileAttributes.ReparsePoint,IgnoreInaccessible=false})){cancel.ThrowIfCancellationRequested();z.CreateEntryFromFile(child,root+"/"+Path.GetRelativePath(f,child).Replace('\\','/'));}}else z.CreateEntryFromFile(f,root);}}
+                    if(Directory.Exists(f))
+                    {
+                        z.CreateEntry(root+"/");
+                        var options=new EnumerationOptions{RecurseSubdirectories=true,AttributesToSkip=System.IO.FileAttributes.ReparsePoint,IgnoreInaccessible=false};
+                        foreach(var subdir in Directory.EnumerateDirectories(f,"*",options))
+                        {
+                            cancel.ThrowIfCancellationRequested();
+                            z.CreateEntry(root+"/"+Path.GetRelativePath(f,subdir).Replace(Path.DirectorySeparatorChar,'/')+"/");
+                        }
+                        foreach(var child in Directory.EnumerateFiles(f,"*",options))
+                        {
+                            cancel.ThrowIfCancellationRequested();
+                            z.CreateEntryFromFile(child,root+"/"+Path.GetRelativePath(f,child).Replace(Path.DirectorySeparatorChar,'/'));
+                        }
+                    }
+                    else z.CreateEntryFromFile(f,root);
+                }}
                 outputs.Add(Output.Commit(zip,files[0],"zip",files.Length>1?" 合併":""));return new(outputs,"ZIP 已建立");
             }
             if(id=="img.to.pdf"||id=="pdf.merge")

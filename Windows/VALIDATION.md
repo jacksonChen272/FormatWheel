@@ -3,9 +3,9 @@
 Windows x64 preview, upstream baseline `1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`.
 
 - Release build: 0 warnings, 0 errors with .NET SDK 10.0.402.
-- 57 integration checks passed, 0 failed. Generated fixtures only; no private documents used.
+- 58 integration checks passed, 0 failed. Generated fixtures only; no private documents used.
 - Formats decoded after conversion: PNG, JPG, WebP, TIFF, GIF, HEIC, AVIF.
-- Verified resize/rotation dimensions, source SHA-256 preservation, unique output names, valid ZIP and SHA-256 output, DOCX Unicode text round trip, rejection of mixed file kinds, PDF page count/merge and output creation, eight wheel directions and center cancellation.
+- Verified resize/rotation dimensions, source SHA-256 preservation, unique output names, valid ZIP including empty directories and SHA-256 output, DOCX Unicode text round trip, rejection of mixed file kinds, PDF page count/merge and output creation, eight wheel directions and center cancellation.
 - Windows OCR recognized generated `HELLO 123`; U²-Net inference generated a full-size PNG with alpha. This does not establish accuracy on real photographs or all OCR languages.
 - All 27 video/audio action paths exercised with FFmpeg 9.0.2 using a generated test pattern and sine wave; FFprobe could read every resulting output. Does not establish quality or compatibility for every codec/input container.
 - UI inspected with the computer-use skill: welcome screen, native file picker, actual full-screen wheel with blurred desktop. A JPG was created by clicking the wheel. Preview PNGs additionally generated directly from WPF rendering.
