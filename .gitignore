@@ -3,3 +3,7 @@ dist/
 宣传片/
 screenshots/
 .DS_Store
+Windows/bin/
+Windows/obj/
+Windows/publish/
+Windows/test-results/

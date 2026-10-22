@@ -1,3 +1,5 @@
+> **Windows port preview:** This fork adds an independent Windows x64 implementation under [`Windows/`](Windows/README-Windows.md). It is not an official upstream release or a claim of full macOS parity. The original macOS source and MIT attribution are preserved below.
+
 <p align="center">
   <img src="docs/media/icon.png" width="128" height="128" alt="格式轮盘">
 </p>
