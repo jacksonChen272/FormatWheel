@@ -31,7 +31,19 @@ public sealed class WheelCanvas : FrameworkElement
     public string Kind => Files.Length==0?"img":Catalog.ForFiles(Files);
     public ActionItem?[] Options => Catalog.Pages[Kind][Page % Catalog.Pages[Kind].Length];
     public int Pages => Catalog.Pages[Kind].Length;
-    public int Hit(Point p){double dx=p.X-Center.X,dy=p.Y-Center.Y;if(dx*dx+dy*dy<Math.Pow(Radius*.34,2))return -1;return ((int)Math.Floor((Math.Atan2(dx,-dy)+Math.PI/8)/(Math.PI/4))+8)%8;}
+    string? hoveredAction;
+    public int Hit(Point p){double dx=p.X-Center.X,dy=p.Y-Center.Y,d=dx*dx+dy*dy;if(d<Math.Pow(Radius*.56,2)||d>Radius*Radius)return -1;return ((int)Math.Floor((Math.Atan2(dx,-dy)+Math.PI/8)/(Math.PI/4))+8)%8;}
+    // Both WPF mouse events and OLE drag events use this transition; repeated moves
+    // inside one sector do not replay the tick. Empty slots are not selections.
+    public bool UpdatePointer(Point? point)
+    {
+        int next=point.HasValue?Hit(point.Value):-1;
+        if(next>=0&&Options[next]==null)next=-1;
+        string? id=next>=0?Options[next]?.Id:null;
+        bool entered=id!=null&&id!=hoveredAction;
+        if(next!=Hover||id!=hoveredAction){Hover=next;hoveredAction=id;Status="";InvalidateVisual();}
+        return entered;
+    }
     static readonly Typeface Font=new(new FontFamily("Microsoft JhengHei UI"),FontStyles.Normal,FontWeights.Bold,FontStretches.Normal);
     static readonly Typeface Condensed=new(new FontFamily("Impact"),FontStyles.Normal,FontWeights.Normal,FontStretches.Condensed);
     public void Text(DrawingContext dc,string s,Point p,double size,Brush? brush=null,bool center=true,bool latin=false,double maxWidth=1000)
@@ -66,14 +78,32 @@ public sealed class WheelCanvas : FrameworkElement
         var active=Hover>=0?Options[Hover]:null;
         Text(dc,Catalog.Name(Kind)+" · "+(Page==0?L.T("格式轉換"):L.T("工具")),new Point(Center.X,Center.Y-85*scale),16*scale,maxWidth:inner*1.9);
         Text(dc,active?.Label??(Files.Length==0?L.T("拖入檔案"):L.T("選擇方向")),new Point(Center.X,Center.Y-48*scale),32*scale,latin:active?.Label.All(c=>c<128)??false,maxWidth:inner*1.9);
-        string detail=active==null?(Demo?L.T("預覽模式 · 不會轉換檔案"):Files.Length==0?L.T("等待拖曳的檔案…"):L.F("{0} 個檔案 · 移回中心取消",Files.Length)):((Demo?null:active.Unavailable(Files))??active.Detail);
+        string detail=Demo?L.T("預覽模式 · 不會轉換檔案"):Files.Length==0?L.T("等待拖曳的檔案…"):L.F("{0} 個檔案 · 移回中心取消",Files.Length);
+        if(CompactPreview&&active!=null)detail=active.Detail;
         Text(dc,detail,new Point(Center.X,Center.Y+16*scale),14*scale,maxWidth:inner*1.8);
         Text(dc,$"‹   {Page+1} / {Pages}   ›",new Point(Center.X,Center.Y+94*scale),21*scale,Accent,maxWidth:inner*1.8);
         if(CompactPreview)return;
         double cardW=Math.Min(310,ActualWidth*.28);dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(200,0,0,0)),null,new Rect(28,35,cardW,110));dc.DrawRectangle(Accent,null,new Rect(28,35,cardW,3));
         Text(dc,L.T("按 ⇧ Shift 切換  轉換 / 工具\n朝格子方向拖，放開滑鼠執行\n移回中心再放開 = 取消"),new Point(43,53),14,center:false,maxWidth:cardW-25);
-        if(Files.Length>0){double right=ActualWidth-cardW-28;dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(200,0,0,0)),null,new Rect(right,35,cardW,132));dc.DrawRectangle(Accent,null,new Rect(right,35,cardW,3));Text(dc,Path.GetFileName(Files[0])+(Files.Length>1?$" +{Files.Length-1}":""),new Point(right+15,52),15,center:false,maxWidth:cardW-30);Text(dc,new string('★',Wanted)+new string('☆',5-Wanted),new Point(right+15,84),17,Wanted>0?Brushes.Gold:Brushes.Gray,false,maxWidth:cardW-30);Text(dc,Privacy,new Point(right+15,113),12,center:false,maxWidth:cardW-30);}
         Text(dc,Status.Length>0?Status:L.T("FORMATWHEEL  /  WINDOWS    ·    Esc 取消    ·    Tab / 滾輪 翻頁"),new Point(ActualWidth/2,ActualHeight-40),12,Brushes.LightGray,maxWidth:ActualWidth-60);
+        if(active!=null)DrawHint(dc,active);
+    }
+    void DrawHint(DrawingContext dc,ActionItem item)
+    {
+        double width=Math.Min(280,Math.Max(140,ActualWidth-32)),padding=16;
+        FormattedText Line(string value,double size,Brush brush)=>new(value,CultureInfo.CurrentUICulture,FlowDirection.LeftToRight,Font,size,brush,VisualTreeHelper.GetDpi(this).PixelsPerDip){MaxTextWidth=width-padding*2};
+        var lines=new List<FormattedText>{Line(item.Label,18,Accent),Line(item.Detail,14,Brushes.White)};
+        if(!Demo&&item.Unavailable(Files) is string reason)lines.Add(Line(reason,13,Brushes.Gold));
+        if(Files.Length>0){var file=Line(Path.GetFileName(Files[0])+(Files.Length>1?$" +{Files.Length-1}":""),11,Brushes.LightGray);file.MaxLineCount=1;file.Trimming=TextTrimming.CharacterEllipsis;lines.Add(file);}
+        if(!Demo&&Privacy.Length>0)lines.Add(Line(new string('★',Wanted)+new string('☆',5-Wanted)+"  "+Privacy,11,Wanted>0?Brushes.Gold:Brushes.LightGray));
+        double height=padding*2+lines.Sum(line=>line.Height)+7*(lines.Count-1);
+        var bounds=WheelPlacement.Hint(Center,Radius,Hover,new Size(ActualWidth,ActualHeight),new Size(width,height));
+        var anchor=Polar(Center,Radius+3,Hover*Math.PI/4);
+        var edge=new Point(Math.Clamp(anchor.X,bounds.Left,bounds.Right),Math.Clamp(anchor.Y,bounds.Top,bounds.Bottom));
+        dc.DrawLine(new Pen(Accent,2),anchor,edge);
+        dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(247,20,24,32)),new Pen(Accent,1.5),bounds,10,10);
+        dc.PushClip(new RectangleGeometry(bounds));
+        double y=bounds.Top+padding;foreach(var line in lines){dc.DrawText(line,new Point(bounds.Left+padding,y));y+=line.Height+7;}dc.Pop();
     }
     void DrawIcon(DrawingContext dc,ActionItem item,Rect r)
     {
@@ -106,7 +136,7 @@ public sealed class WheelWindow : Window
     public WheelCanvas View=new();
     readonly Action<ActionItem,string[]> execute;
     readonly bool dragging;
-    bool committed,closed;
+    bool committed,closed,lastShift;
     readonly DispatcherTimer timer=new(){Interval=TimeSpan.FromMilliseconds(16)};
     public WheelWindow(string[] files,bool drag,Action<ActionItem,string[]> run,bool demo=false)
     {
@@ -117,18 +147,23 @@ public sealed class WheelWindow : Window
         if(Settings.Current.Blur)try{using var capture=new System.Drawing.Bitmap(screen.Bounds.Width,screen.Bounds.Height);using(var graphics=System.Drawing.Graphics.FromImage(capture))graphics.CopyFromScreen(screen.Bounds.Location,System.Drawing.Point.Empty,screen.Bounds.Size);using var bytes=new MemoryStream();capture.Save(bytes,System.Drawing.Imaging.ImageFormat.Png);bytes.Position=0;var bitmap=new BitmapImage();bitmap.BeginInit();bitmap.CacheOption=BitmapCacheOption.OnLoad;bitmap.StreamSource=bytes;bitmap.EndInit();bitmap.Freeze();grid.Children.Add(new System.Windows.Controls.Image{Source=bitmap,Stretch=Stretch.Fill,Effect=new BlurEffect{Radius=22},IsHitTestVisible=false});grid.Children.Add(new System.Windows.Controls.Border{Background=new SolidColorBrush(Color.FromArgb(100,0,0,0)),IsHitTestVisible=false});}catch{}
         grid.Children.Add(View);Content=grid;
         SourceInitialized+=(_,_)=>{var h=new WindowInteropHelper(this).Handle;Native.SetWindowPos(h,new IntPtr(-1),screen.Bounds.Left,screen.Bounds.Top,screen.Bounds.Width,screen.Bounds.Height,0x10);};
-        Loaded+=(_,_)=>{var mouse=PointFromScreen(new Point(System.Windows.Forms.Cursor.Position.X,System.Windows.Forms.Cursor.Position.Y));var placement=WheelPlacement.Place(mouse,new Size(ActualWidth,ActualHeight),View.Radius,drag);View.Radius=placement.Radius;View.Center=placement.Center;View.InvalidateVisual();Output.Log($"wheel display={screen.DeviceName} bounds={screen.Bounds} logical={ActualWidth}x{ActualHeight} dpi={VisualTreeHelper.GetDpi(this).PixelsPerDip}");if(SystemParameters.ClientAreaAnimation)BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(110)));};
+        Loaded+=(_,_)=>{var mouse=Pointer();var placement=WheelPlacement.Place(mouse,new Size(ActualWidth,ActualHeight),View.Radius,drag);View.Radius=placement.Radius;View.Center=placement.Center;View.InvalidateVisual();Output.Log($"wheel display={screen.DeviceName} bounds={screen.Bounds} logical={ActualWidth}x{ActualHeight} dpi={VisualTreeHelper.GetDpi(this).PixelsPerDip}");Sound.Play("open");UpdatePointer(mouse,false);timer.Start();if(SystemParameters.ClientAreaAnimation)BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(110)));};
         DragEnter+=Drag;DragOver+=Drag;
-        Drop+=(_,e)=>{e.Handled=true;e.Effects=DragDropEffects.None;if(e.Data.GetDataPresent(DataFormats.FileDrop)){View.Files=(string[])e.Data.GetData(DataFormats.FileDrop);View.Hover=View.Hit(e.GetPosition(View));Select();if(committed)e.Effects=DragDropEffects.Copy;}if(!committed&&!closed)Close();};
-        MouseMove+=(_,e)=>{View.Hover=View.Hit(e.GetPosition(View));View.InvalidateVisual();};
-        MouseLeftButtonDown+=(_,_)=>{if(!dragging)Select();};MouseRightButtonDown+=(_,_)=>Close();
-        MouseWheel+=(_,_)=>Flip();KeyDown+=(_,e)=>{if(e.Key==Key.Escape)Close();else if(e.Key==Key.Tab||e.Key==Key.Q||e.Key==Key.E)Flip();else if(e.Key==Key.Enter||e.Key==Key.Space)Select();};
-        bool lastShift=Native.Down(0x10);timer.Tick+=(_,_)=>{if(Native.Down(0x1B)){Close();return;}bool shift=Native.Down(0x10);if(shift&&!lastShift)Flip();lastShift=shift;if(dragging&&!Native.Down(1)){timer.Stop();Dispatcher.BeginInvoke(()=>{if(!closed)Close();},DispatcherPriority.Background);}};timer.Start();Closed+=(_,_)=>{closed=true;timer.Stop();};
+        DragLeave+=(_,_)=>UpdatePointer(null);
+        Drop+=(_,e)=>{e.Handled=true;e.Effects=DragDropEffects.None;if(e.Data.GetDataPresent(DataFormats.FileDrop)){View.Files=(string[])e.Data.GetData(DataFormats.FileDrop);UpdatePointer(e.GetPosition(View),false);Select();if(committed)e.Effects=DragDropEffects.Copy;}if(!committed&&!closed)Close();};
+        MouseMove+=(_,e)=>UpdatePointer(e.GetPosition(View));MouseLeave+=(_,_)=>UpdatePointer(null);
+        MouseLeftButtonDown+=(_,e)=>{if(!dragging){UpdatePointer(e.GetPosition(View),false);Select();}};MouseRightButtonDown+=(_,_)=>Close();
+        MouseWheel+=(_,_)=>Flip();KeyDown+=(_,e)=>{if(e.Key==Key.Escape)Close();else if(e.Key==Key.LeftShift||e.Key==Key.RightShift)Shift(true);else if(e.Key==Key.Tab||e.Key==Key.Q||e.Key==Key.E)Flip();else if(e.Key==Key.Enter||e.Key==Key.Space)Select();};
+        KeyUp+=(_,e)=>{if(e.Key==Key.LeftShift||e.Key==Key.RightShift)Shift(Native.Down(0x10));};
+        lastShift=Native.Down(0x10);timer.Tick+=(_,_)=>{if(Native.Down(0x1B)){Close();return;}Shift(Native.Down(0x10));UpdatePointer(dragging||IsActive?Pointer():null);if(dragging&&!Native.Down(1)){timer.Stop();Dispatcher.BeginInvoke(()=>{if(!closed)Close();},DispatcherPriority.Background);}};Closed+=(_,_)=>{closed=true;timer.Stop();Sound.ClearHover();};
         if(files.Length>0)_=Scan();
     }
-    void Drag(object sender,DragEventArgs e){e.Handled=true;e.Effects=DragDropEffects.None;if(!e.Data.GetDataPresent(DataFormats.FileDrop))return;var files=(string[])e.Data.GetData(DataFormats.FileDrop);if(!View.Files.SequenceEqual(files)){View.Files=files;View.Page=0;_=Scan();}View.Hover=View.Hit(e.GetPosition(View));if(View.Hover>=0&&View.Options[View.Hover]?.Unavailable(files)==null)e.Effects=DragDropEffects.Copy;View.InvalidateVisual();}
+    Point Pointer()=>View.PointFromScreen(new Point(System.Windows.Forms.Cursor.Position.X,System.Windows.Forms.Cursor.Position.Y));
+    void UpdatePointer(Point? point,bool audible=true){if(View.UpdatePointer(point)){if(audible)Sound.Play("hover");FeedbackTrace.Write($"hover {View.Options[View.Hover]!.Id}");}else if(View.Hover<0)Sound.ClearHover();}
+    void Shift(bool down){if(down&&!lastShift)Flip();lastShift=down;}
+    void Drag(object sender,DragEventArgs e){e.Handled=true;e.Effects=DragDropEffects.None;if(!e.Data.GetDataPresent(DataFormats.FileDrop)){UpdatePointer(null);return;}var files=(string[])e.Data.GetData(DataFormats.FileDrop);if(!View.Files.SequenceEqual(files)){View.Files=files;View.Page=0;_=Scan();View.InvalidateVisual();}UpdatePointer(e.GetPosition(View));if(View.Hover>=0&&View.Options[View.Hover]?.Unavailable(files)==null)e.Effects=DragDropEffects.Copy;}
     async System.Threading.Tasks.Task Scan(){var files=View.Files;var scan=await System.Threading.Tasks.Task.Run(()=>Privacy.Scan(files));if(closed||!files.SequenceEqual(View.Files))return;View.Wanted=scan.Level;View.Privacy=scan.Detail;View.InvalidateVisual();}
-    public void Flip(){View.Page=(View.Page+1)%View.Pages;View.InvalidateVisual();Sound.Play("flip");}
+    public void Flip(){View.Page=(View.Page+1)%View.Pages;UpdatePointer(Pointer(),false);View.InvalidateVisual();Sound.ClearHover();Sound.Play("flip");}
     void Select(){if(committed)return;if(View.Hover<0){Close();return;}var item=View.Options[View.Hover];if(item==null)return;if(View.Demo){Close();Banner.Show(true,L.T("預覽完成"),L.T("這是演示，沒有轉換檔案"));return;}if(item.Unavailable(View.Files) is string reason){View.Status=reason;View.InvalidateVisual();Sound.Play("denied");return;}if(View.Files.Length==0)return;committed=true;var files=View.Files;Close();execute(item,files);}
 }
 public static class Native

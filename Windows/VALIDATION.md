@@ -1,11 +1,18 @@
-# Windows 0.2.0 validation — 2026-10-23 (Asia/Shanghai)
+# Windows 0.2.1 validation — 2026-10-23 (Asia/Shanghai)
 
 Independent Windows x64 preview. Upstream baseline: `1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`. Original MIT attribution and Swift source preserved.
 
+## 0.2.1 feedback regression checks
+
+- Added six regressions: enter/leave/re-entry with one tick per transition; page changes, empty and unavailable options; hint bounds for all eight directions at four DPI scales and five wheel positions; valid, non-silent, distinct PCM cues; serialized opening/hover playback with bounded hover backlog; mute and pending-hover cancellation.
+- Computer Use at 125% DPI verified TXT → MD descriptions moving alongside their sectors, center cancellation hiding the card, the unavailable PDF explanation, Shift and scroll changing the card immediately, and an empty tool slot hiding the previous description.
+- The diagnostic trace recorded Windows audio API success for opening, hover and page-change cues. This confirms playback completion reported by Windows, not a human listening test or the speaker's volume/mute setting. Optional diagnostic trace: `FORMATWHEEL_FEEDBACK_TRACE=1`; off by default.
+- Sound data stays valid until synchronous playback finishes on a background worker. No new cue calls Stop/Dispose on the previous cue. Pending hover ticks are coalesced and cleared on leaving to avoid delayed feedback.
+- The full 82-check local run includes existing FFmpeg and LibreOffice conversions. Prior 0.2.0 installer/tour UI validation below is historical; the installer and tour were not changed by this patch.
 ## Automated checks
 
 - .NET SDK 10.0.402, self-contained .NET 10.0.13, Windows x64. Builds succeeded without compiler warnings/errors.
-- A standalone EXE was copied into a new folder without DLLs, model or JSON sidecars. It passed **76 checks, 0 failures**, exit code 0. Its embedded assets were extracted into fresh isolated test data. FFmpeg and LibreOffice were separately installed optional engines.
+- A standalone EXE was copied into a new folder without DLLs, model or JSON sidecars. It passed **82 checks, 0 failures**, exit code 0. Its embedded assets were extracted into fresh isolated test data. FFmpeg and LibreOffice were separately installed optional engines.
 - Image round trips: PNG, JPG, WebP, TIFF, GIF, HEIC and AVIF; resize/rotation dimensions; original SHA-256 preserved; unique output naming.
 - U²-Net inference produced a correctly sized PNG with alpha. Windows OCR recognized a generated `HELLO 123` fixture. These checks do not establish real-photo segmentation quality or all OCR languages.
 - PDF conversion, merge, split, rotation, metadata, page count and image reconstruction; ZIP preserves empty directories; SHA-256 and Unicode DOCX round trip; mixed input rejection.

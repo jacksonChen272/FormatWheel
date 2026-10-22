@@ -1,6 +1,6 @@
-# FormatWheel for Windows — 0.2.0 preview
+# FormatWheel for Windows — 0.2.1 preview
 
-**[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/tag/windows-v0.2.0)**
+**[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/tag/windows-v0.2.1)**
 
 English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET installation is needed. On first launch, choose English / 繁體中文 / 简体中文, optionally install FFmpeg and LibreOffice, then follow the eight-step tour. Right-click the tray icon (or home window) to install tools later; the tray menu also offers language selection and tour replay/reset. The EXE is unsigned. This is an independent community Windows preview, not an official upstream release.
 
@@ -8,6 +8,15 @@ English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET ins
 
 基於 [Elise616/FormatWheel](https://github.com/Elise616/FormatWheel) 的獨立 Windows 移植。原始基準：`1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`。原版 MIT 版權聲明完整保留。此版本不是原作者官方 Windows 發行，也不宣稱 100% 相同。
 
+## 0.2.1 修正 / Feedback fixes
+
+- 開啟輪盤、切換選項及翻頁都有各自的音效。音效在背景依序播放，快速移動不會切斷開啟音效；同一選項不會因滑鼠微動而連續發聲。系統匣的音效開關仍有效。
+- 選項簡介改為浮在該選項旁邊，移入立即顯示，移出輪盤、回到中心或進入空白格便隱藏；切換頁面時即時更新。未安裝工具的原因也會列出。
+- 簡介保留檔名與隱私摘要，取消固定右上角資訊框；依螢幕邊界調整位置。點擊或放開檔案時需位於可見的輪盤格子內。
+
+English: Opening, hover and page-change cues no longer interrupt one another. Contextual descriptions appear beside the current option, update immediately and disappear on leaving. The sound preference is respected.
+
+简体中文：修复打开轮盘及切换选项时的音效。简介浮动显示在当前选项旁边，移入即显示、移开即隐藏，翻页时同步更新。
 ## 使用
 
 Windows 10 2004（19041）或更新版本，x64。下載單檔 `FormatWheel-Windows-x64.exe` 即可開啟，不必另裝 .NET。第一次執行會在使用者資料夾解開內建模型及資源；.NET 原生程式庫快取在 Windows 暫存資料夾。另提供完整 ZIP，可解壓後開啟 `FormatWheel.exe`；ZIP 版本須保留隨附檔案。

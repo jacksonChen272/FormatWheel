@@ -1,6 +1,6 @@
 > **Windows port preview:** This fork adds an independent Windows x64 implementation under [`Windows/`](Windows/README-Windows.md). It is not an official upstream release or a claim of full macOS parity. The original macOS source and MIT attribution are preserved below.
 
-**Windows 下載 / 下载 / Download:** [FormatWheel-Windows-x64.exe](https://github.com/rickuuyu-create/FormatWheel/releases/download/windows-v0.2.0/FormatWheel-Windows-x64.exe) · [Release notes](https://github.com/rickuuyu-create/FormatWheel/releases/tag/windows-v0.2.0) · [Windows guide](Windows/README-Windows.md)
+**Windows 下載 / 下载 / Download:** [FormatWheel-Windows-x64.exe](https://github.com/rickuuyu-create/FormatWheel/releases/download/windows-v0.2.1/FormatWheel-Windows-x64.exe) · [Release notes](https://github.com/rickuuyu-create/FormatWheel/releases/tag/windows-v0.2.1) · [Windows guide](Windows/README-Windows.md)
 
 Windows 10/11 x64 · 繁體中文 / 简体中文 / English · First-run tool installer and quick tour · No separate .NET installation required.
 

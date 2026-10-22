@@ -69,7 +69,7 @@ public class App : Application
         if(job!=null)Add(L.T("取消目前轉換"),()=>job.Cancel());Add(L.T("結束"),()=>{job?.Cancel();Shutdown();});
     }
     void Pick(){using var dialog=new Forms.OpenFileDialog{Multiselect=true,Title=L.T("選擇要轉換的檔案")};if(dialog.ShowDialog()==Forms.DialogResult.OK)Open(dialog.FileNames,false);}
-    void Open(string[] files,bool drag,bool demo=false){if(wheel!=null)return;Output.Log($"wheel open files={files.Length} drag={drag}");wheel=new WheelWindow(files,drag,Execute,demo);wheel.Loaded+=(_,_)=>Output.Log($"wheel loaded visible={wheel?.IsVisible}");wheel.Closed+=(_,_)=>{Output.Log("wheel closed");wheel=null;};wheel.Show();if(!drag)wheel.Activate();Sound.Play("open");}
+    void Open(string[] files,bool drag,bool demo=false){if(wheel!=null)return;Output.Log($"wheel open files={files.Length} drag={drag}");wheel=new WheelWindow(files,drag,Execute,demo);wheel.Loaded+=(_,_)=>Output.Log($"wheel loaded visible={wheel?.IsVisible}");wheel.Closed+=(_,_)=>{Output.Log("wheel closed");wheel=null;};wheel.Show();if(!drag)wheel.Activate();}
     async void Execute(ActionItem action,string[] files)
     {
         if(job!=null)return;job=new CancellationTokenSource();var busy=Banner.Busy(action.Label,()=>job?.Cancel());
@@ -103,15 +103,5 @@ public static class Banner
     {
         var w=new Window{Title=title,Width=650,Height=240,WindowStyle=WindowStyle.None,AllowsTransparency=true,Background=new SolidColorBrush(Color.FromArgb(235,10,12,15)),Foreground=Brushes.White,Topmost=true,ShowInTaskbar=false,WindowStartupLocation=WindowStartupLocation.CenterScreen};var s=new StackPanel{Margin=new Thickness(24)};
         s.Children.Add(new TextBlock{Text=passed?"MISSION PASSED":"WASTED",FontFamily=new FontFamily("Impact"),FontSize=52,Foreground=passed?Brushes.Gold:Brushes.IndianRed,HorizontalAlignment=HorizontalAlignment.Center});s.Children.Add(new TextBlock{Text=title,FontSize=18,TextAlignment=TextAlignment.Center});s.Children.Add(new TextBlock{Text=detail,FontSize=13,Margin=new Thickness(0,12,0,0),TextWrapping=TextWrapping.Wrap,TextTrimming=TextTrimming.CharacterEllipsis,MaxHeight=85,TextAlignment=TextAlignment.Center});w.Content=s;w.MouseDown+=(_,_)=>w.Close();w.Show();var t=new DispatcherTimer{Interval=TimeSpan.FromSeconds(passed?4:9)};t.Tick+=(_,_)=>{t.Stop();w.Close();};w.Closed+=(_,_)=>t.Stop();t.Start();
-    }
-}
-public static class Sound
-{
-    static System.Media.SoundPlayer? player;
-    static MemoryStream? current;
-    public static void Play(string kind)
-    {
-        if(!Settings.Current.Sound)return;
-        try{const int rate=44100;double seconds=kind=="failed"?.65:kind.Contains('.')?.5:.12;int count=(int)(rate*seconds);var random=new Random(616);using var stream=new MemoryStream();using var w=new BinaryWriter(stream);w.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));w.Write(36+count*2);w.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt "));w.Write(16);w.Write((short)1);w.Write((short)1);w.Write(rate);w.Write(rate*2);w.Write((short)2);w.Write((short)16);w.Write(System.Text.Encoding.ASCII.GetBytes("data"));w.Write(count*2);for(int i=0;i<count;i++){double t=i/(double)rate;double signal=kind=="failed"?Math.Sin(2*Math.PI*(180*t-70*t*t))*Math.Exp(-t*5):((random.NextDouble()*2-1)*Math.Exp(-t*85)+.35*Math.Sin(2*Math.PI*760*t)*Math.Exp(-t*22));if(kind.Contains('.')&&t>.14)signal+=.22*Math.Sin(2*Math.PI*523.25*(t-.14))*Math.Exp(-(t-.14)*9);w.Write((short)(Math.Clamp(signal,-1,1)*18000));}player?.Stop();player?.Dispose();current?.Dispose();current=new MemoryStream(stream.ToArray());player=new System.Media.SoundPlayer(current);player.Play();}catch{}
     }
 }
