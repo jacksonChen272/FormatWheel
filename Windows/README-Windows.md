@@ -1,4 +1,4 @@
-# FormatWheel for Windows — 0.3.1 preview
+# FormatWheel for Windows — 0.3.2 preview
 
 **[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/latest)**
 

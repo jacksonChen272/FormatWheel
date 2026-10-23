@@ -4,7 +4,7 @@
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable><ImplicitUsings>disable</ImplicitUsings>
-    <AssemblyName>FormatWheel</AssemblyName><Version>0.3.1</Version>
+    <AssemblyName>FormatWheel</AssemblyName><Version>0.3.2</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>

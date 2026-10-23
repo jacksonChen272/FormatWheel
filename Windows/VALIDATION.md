@@ -1,6 +1,12 @@
-# Windows 0.3.1 validation — 2026-10-23 (Asia/Shanghai)
+# Windows 0.3.2 validation — 2026-10-23 (Asia/Shanghai)
 
 Independent Windows x64 preview. Upstream baseline: `1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`. Original MIT attribution and Swift source preserved.
+
+## 0.3.2 result interaction
+
+- Visible result windows observe fresh global mouse-button presses and close immediately, without adding on-screen instructions. Mouse-up, movement and wheel input do not dismiss them. The native observer always forwards input and is released on close or replacement.
+- The existing 5-second success / 8-second failure lifetime and fade remain unchanged. Automatic-lifetime tests use an isolated input source so unrelated user activity cannot invalidate them.
+- Regression checks cover left/right/middle/extra buttons, initiating gesture release, duplicate queued presses, replacement-window races, observer cleanup and real native hook installation/disposal. These checks do not simulate physical hardware input.
 
 ## 0.3.1 result banners
 

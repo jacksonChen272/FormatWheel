@@ -24,17 +24,20 @@ internal sealed class FeedbackBanner : Window
     readonly PrivacyResult? before,after;
     readonly TextBlock? stars;
     long started;
+    IDisposable? clicks;
+    bool closed,dismissQueued;
     internal const int PassiveStyles=0x08000000|0x00000020|0x00000080; // NOACTIVATE, TRANSPARENT, TOOLWINDOW
     internal bool HasBackdrop {get;private set;}
     internal bool ClosedAutomatically {get;private set;}
+    internal bool ClosedByClick {get;private set;}
 
-    internal static FeedbackBanner ShowResult(FeedbackOutcome outcome,string title,string detail,string sizeChange="",PrivacyResult? before=null,PrivacyResult? after=null)
+    internal static FeedbackBanner ShowResult(FeedbackOutcome outcome,string title,string detail,string sizeChange="",PrivacyResult? before=null,PrivacyResult? after=null,Func<Action,IDisposable>? observeClicks=null)
     {
         current?.Close();
-        var banner=new FeedbackBanner(outcome,title,detail,sizeChange,before,after);
+        var banner=new FeedbackBanner(outcome,title,detail,sizeChange,before,after,observeClicks);
         current=banner;banner.Closed+=(_,_)=>{if(current==banner)current=null;};banner.Show();return banner;
     }
-    FeedbackBanner(FeedbackOutcome outcome,string title,string detail,string sizeChange,PrivacyResult? before,PrivacyResult? after)
+    FeedbackBanner(FeedbackOutcome outcome,string title,string detail,string sizeChange,PrivacyResult? before,PrivacyResult? after,Func<Action,IDisposable>? observeClicks)
     {
         this.outcome=outcome;this.before=before;this.after=after;
         Title="FormatWheel · "+Headline(outcome);WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;
@@ -70,6 +73,9 @@ internal sealed class FeedbackBanner : Window
         Loaded+=(_,_)=>
         {
             started=Environment.TickCount64;
+            // Observe only fresh button-down events after showing. The release of
+            // the click/drag that started conversion must not dismiss this result.
+            clicks=(observeClicks??(action=>new BannerClickObserver(action)))(QueueClickDismiss);
             Output.Log($"result feedback outcome={outcome} visible={IsVisible} blur={HasBackdrop} size={ActualWidth}x{ActualHeight} dpi={dpi} passive={(GetWindowLongPtr(handle,-20).ToInt64()&PassiveStyles)==PassiveStyles}");
             timer.Start();
         };
@@ -84,7 +90,18 @@ internal sealed class FeedbackBanner : Window
             }
             if(seconds>=Duration(outcome)){ClosedAutomatically=true;Close();}
         };
-        Closed+=(_,_)=>{timer.Stop();Content=null;Output.Log($"result feedback closed automatic={ClosedAutomatically}");};
+        Closed+=(_,_)=>{closed=true;clicks?.Dispose();clicks=null;timer.Stop();Content=null;Output.Log($"result feedback closed automatic={ClosedAutomatically} click={ClosedByClick}");};
+    }
+    void QueueClickDismiss()
+    {
+        if(closed||dismissQueued)return;
+        dismissQueued=true;
+        // Return promptly from the native hook; never swallow the original input.
+        Dispatcher.BeginInvoke(DispatcherPriority.Send,new Action(()=>
+        {
+            if(closed)return;
+            ClosedByClick=true;Close();
+        }));
     }
     internal static double Duration(FeedbackOutcome outcome)=>outcome==FeedbackOutcome.Failure?8:5;
     internal static double OpacityAt(FeedbackOutcome outcome,double seconds,bool animate)
@@ -157,4 +174,34 @@ internal sealed class FeedbackBanner : Window
     [DllImport("user32.dll")] internal static extern uint GetDpiForWindow(IntPtr handle);
     [DllImport("user32.dll",EntryPoint="GetWindowLongPtrW")] internal static extern IntPtr GetWindowLongPtr(IntPtr handle,int index);
     [DllImport("user32.dll",EntryPoint="SetWindowLongPtrW")] static extern IntPtr SetWindowLongPtr(IntPtr handle,int index,IntPtr value);
+}
+
+// Scoped to the visible result. No coordinates or input history are collected.
+internal sealed class BannerClickObserver : IDisposable
+{
+    readonly HookProc callback;
+    IntPtr hook;
+    internal bool IsInstalled=>hook!=IntPtr.Zero;
+    internal BannerClickObserver(Action clicked)
+    {
+        callback=(code,message,data)=>
+        {
+            if(code>=0&&IsButtonDown(message.ToInt64()))clicked();
+            return CallNextHookEx(IntPtr.Zero,code,message,data);
+        };
+        hook=SetWindowsHookEx(14,callback,GetModuleHandle(null),0); // WH_MOUSE_LL
+        if(hook==IntPtr.Zero)Output.Log("Result click observer unavailable: "+Marshal.GetLastWin32Error());
+    }
+    internal static bool IsButtonDown(long message)=>message is 0x0201 or 0x0204 or 0x0207 or 0x020B;
+    public void Dispose()
+    {
+        if(hook==IntPtr.Zero)return;
+        UnhookWindowsHookEx(hook);hook=IntPtr.Zero;
+        GC.KeepAlive(callback);
+    }
+    delegate IntPtr HookProc(int code,IntPtr message,IntPtr data);
+    [DllImport("user32.dll",SetLastError=true)] static extern IntPtr SetWindowsHookEx(int kind,HookProc callback,IntPtr module,uint thread);
+    [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook,int code,IntPtr message,IntPtr data);
+    [DllImport("user32.dll")] [return:MarshalAs(UnmanagedType.Bool)] static extern bool UnhookWindowsHookEx(IntPtr hook);
+    [DllImport("kernel32.dll",CharSet=CharSet.Unicode)] static extern IntPtr GetModuleHandle(string? name);
 }

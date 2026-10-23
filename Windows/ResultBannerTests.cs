@@ -62,7 +62,7 @@ public static class ResultBannerTests
         {
             foreach(var outcome in new[]{FeedbackOutcome.Success,FeedbackOutcome.Failure})
             {
-                var banner=FeedbackBanner.ShowResult(outcome,"FormatWheel test",L.Text("自動驗證 · 不會改動檔案","Automatic validation · no files are changed"));
+                var banner=FeedbackBanner.ShowResult(outcome,"FormatWheel test",L.Text("自動驗證 · 不會改動檔案","Automatic validation · no files are changed"),observeClicks:action=>new TestClicks(action));
                 try
                 {
                     await Task.Delay(220);
@@ -78,6 +78,54 @@ public static class ResultBannerTests
             Assert(FeedbackBanner.OpacityAt(FeedbackOutcome.Success,4.8,true) is >0 and <1,"no fade out");
             Assert(FeedbackBanner.OpacityAt(FeedbackOutcome.Failure,7.8,false)==1&&FeedbackBanner.OpacityAt(FeedbackOutcome.Failure,8,false)==0,"reduced animation preference ignored");
         });
+        await check("banner-fresh-click-dismiss-and-observer-cleanup",async()=>
+        {
+            foreach(var outcome in new[]{FeedbackOutcome.Success,FeedbackOutcome.Failure})
+            foreach(long button in new long[]{0x201,0x204,0x207,0x20B})
+            {
+                TestClicks? input=null;
+                var banner=FeedbackBanner.ShowResult(outcome,"FormatWheel test","",observeClicks:action=>input=new TestClicks(action));
+                try
+                {
+                    await Task.Delay(30);
+                    Assert(input!=null&&banner.IsVisible,"observer not started on visible banner");
+                    // Mouse-up from the initiating gesture, motion and wheel are harmless.
+                    foreach(long other in new long[]{0x200,0x202,0x205,0x208,0x20C,0x20A,0x20E})input!.Send(other);
+                    await Task.Delay(30);Assert(banner.IsVisible,"old gesture release or scroll dismissed banner");
+                    input!.Send(button);input.Send(button);
+                    await Task.Delay(50);
+                    Assert(!banner.IsVisible&&banner.ClosedByClick&&!banner.ClosedAutomatically,"fresh click did not immediately close banner");
+                    Assert(input.Disposed,"click observer leaked after dismissal");
+                }
+                finally{if(banner.IsVisible)banner.Close();}
+            }
+            TestClicks? oldInput=null,newInput=null;
+            var old=FeedbackBanner.ShowResult(FeedbackOutcome.Success,"old","",observeClicks:action=>oldInput=new TestClicks(action));
+            await Task.Delay(30);
+            oldInput!.Send(0x201); // Queue dismissal just before replacing this window.
+            var next=FeedbackBanner.ShowResult(FeedbackOutcome.Failure,"new","",observeClicks:action=>newInput=new TestClicks(action));
+            try
+            {
+                await Task.Delay(50);
+                Assert(oldInput.Disposed&&!old.IsVisible&&next.IsVisible,"stale click closed replacement or leaked observer");
+            }
+            finally{next.Close();}
+            Assert(newInput!.Disposed,"observer leaked on manual/replacement close");
+        });
+        await check("banner-native-click-observer-lifetime",()=>
+        {
+            using var observer=new BannerClickObserver(()=>{});
+            Assert(observer.IsInstalled,"native global mouse hook did not install");
+            observer.Dispose();observer.Dispose();
+            Assert(!observer.IsInstalled,"native mouse hook retained after disposal");
+            return Task.CompletedTask;
+        });
+    }
+    sealed class TestClicks(Action clicked):IDisposable
+    {
+        internal bool Disposed {get;private set;}
+        internal void Send(long message){if(!Disposed&&BannerClickObserver.IsButtonDown(message))clicked();}
+        public void Dispose()=>Disposed=true;
     }
     static System.Collections.Generic.IEnumerable<DependencyObject> Descendants(DependencyObject parent)
     {
