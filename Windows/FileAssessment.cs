@@ -36,6 +36,7 @@ public static class FileAssessment
         public int? Height { get; init; }
         // Channel presence from Magick Ping, not a decoded-pixel opacity measurement.
         public bool? HasAlpha { get; init; }
+        public bool? FirstFrameHasAlpha { get; init; }
         public int? FrameCount { get; init; }
         public bool SwapsDimensions { get; init; }
         public int? PageCount { get; init; }
@@ -155,6 +156,7 @@ public static class FileAssessment
             Format = format,
             Width = checked((int)first.Width), Height = checked((int)first.Height),
             HasAlpha = images.Any(im => im.HasAlpha) ? true : images.Count > MaxImageFrames ? null : false,
+            FirstFrameHasAlpha = first.HasAlpha,
             FrameCount = images.Count <= MaxImageFrames ? images.Count : null,
             SwapsDimensions = (int)first.Orientation is >= 5 and <= 8
         };
@@ -357,10 +359,11 @@ public static class FileAssessment
             if (id != "img.cutout")
             {
                 double? alpha = Common(x => x.HasAlpha.HasValue ? x.HasAlpha.Value ? 1 : 0 : null);
-                double? retained = target == "jpg" || id == "img.backdrop" ? 0 : target is "png" or "webp" or "tiff" or "avif" or "pdf" ? alpha : alpha == 0 ? 0 : null;
+                double? firstAlpha = Common(x => x.FirstFrameHasAlpha.HasValue ? x.FirstFrameHasAlpha.Value ? 1 : 0 : null);
+                double? retained = target == "jpg" || id == "img.backdrop" ? 0 : target is "png" or "webp" or "tiff" or "avif" or "pdf" ? firstAlpha : alpha == 0 ? 0 : null;
                 Row("透明度保留", "Alpha retained", alpha, alpha.HasValue ? retained : null,
-                    target == "jpg" ? "JPG 移除 alpha，透明區域填白。" : target == "pdf" ? "保留圖片透明通道，PDF 閱讀器決定頁面底色。" : "依來源 alpha 通道；不會憑空新增透明度。",
-                    target == "jpg" ? "JPG removes alpha and fills transparent areas white." : target == "pdf" ? "Keeps image alpha; the PDF viewer determines the page background." : "Based on source alpha; conversion does not create transparency.");
+                    target == "jpg" ? "JPG 移除 alpha，透明區域填白。" : target == "pdf" ? "只保留首幀的透明通道，PDF 閱讀器決定頁面底色。" : "依首幀 alpha 通道；不會保留後續幀或憑空新增透明度。",
+                    target == "jpg" ? "JPG removes alpha and fills transparent areas white." : target == "pdf" ? "Keeps first-frame alpha; the PDF viewer determines the page background." : "Based on first-frame alpha; later frames are lost and transparency is not invented.");
             }
             if (id == "img.half")
                 Row("像素數保留", "Pixel count retained", 1, Common(x => x.Width is int w && x.Height is int h && w > 0 && h > 0 ? (double)Math.Max(1, w / 2) * Math.Max(1, h / 2) / w / h : null), "長寬各減半（至少 1 px）。", "Width and height halved (minimum 1 px).");

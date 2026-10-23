@@ -46,17 +46,20 @@ public record PrivacyResult(int Level,string Detail)
 public static class Privacy
 {
     public const int ScanLimit=24;
-    public static PrivacyResult Scan(string[] files) => Scan(files,ProbeVideo);
+    public static PrivacyResult Scan(string[] files,CancellationToken cancellationToken=default)
+        => Scan(files,file=>ProbeVideo(file,cancellationToken),cancellationToken);
 
     // Per-call injection tests missing tools, timeouts and probe responses without
     // modifying PATH or shared application state. Null means ffprobe is missing.
-    internal static PrivacyResult Scan(string[] files,Func<string,string?> probeVideo)
+    internal static PrivacyResult Scan(string[] files,Func<string,string?> probeVideo,CancellationToken cancellationToken=default)
     {
         ArgumentNullException.ThrowIfNull(files);
+        cancellationToken.ThrowIfCancellationRequested();
         var reasons=new List<string>();
         int max=0,checkedCount=0,partial=0,unsupported=0,errors=0;
         foreach(var file in files.Take(ScanLimit))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var scan=new FileScan();
             try
             {
@@ -72,8 +75,12 @@ public static class Privacy
                 }
                 else scan.Unsupported(L.Text("此格式不支援隱私檢查","Privacy scanning is unsupported for this format"));
             }
+            catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested) { throw; }
             catch(OperationCanceledException) { scan.Fail(L.Text("檢查逾時","Scan timed out")); }
             catch(Exception) { scan.Fail(L.Text("無法讀取檔案或中繼資料","Could not read the file or its metadata")); }
+            // Native readers may finish in-flight; never continue or return a result
+            // after caller cancellation, even if that reader returned or failed normally.
+            cancellationToken.ThrowIfCancellationRequested();
             max=Math.Max(max,scan.Score);
             foreach(var reason in scan.Reasons) if(!reasons.Contains(reason)) reasons.Add(reason);
             switch(scan.State)
@@ -96,6 +103,7 @@ public static class Privacy
         if(partial>0) coverage+=" · "+string.Format(L.Text("部分檢查 {0}","Partially checked {0}"),partial);
         if(unsupported>0) coverage+=" · "+string.Format(L.Text("未支援 {0}","Unsupported {0}"),unsupported);
         if(errors>0) coverage+=" · "+string.Format(L.Text("失敗 {0}","Failed {0}"),errors);
+        cancellationToken.ThrowIfCancellationRequested();
         return new(Math.Min(max,5),coverage+" · "+string.Join(" · ",reasons))
         {
             State=state,CheckedCount=checkedCount,TotalCount=files.Length,PartialCount=partial,
@@ -269,11 +277,13 @@ public static class Privacy
         }
     }
 
-    static string? ProbeVideo(string file)
+    static string? ProbeVideo(string file,CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var tool=Tool.Find("ffprobe");
         if(tool==null) return null;
-        using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var timeout=CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
         return Tool.Run(tool,new[]{"-v","error","-show_entries","format_tags:stream_tags","-of","json",file},timeout.Token).GetAwaiter().GetResult();
     }
 

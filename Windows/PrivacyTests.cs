@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using ImageMagick;
@@ -27,6 +28,12 @@ public static class PrivacyTests
         void Unknown(PrivacyResult result,PrivacyScanState state)
         {
             Assert(result.State==state && !result.CanRate && !result.VerifiedClean,"Unknown scan exposed a rating: "+result.Detail);
+        }
+        void Canceled(Action scan)
+        {
+            try { scan(); }
+            catch(OperationCanceledException) { return; }
+            throw new Exception("Caller cancellation returned a scan result");
         }
         string Image(string name,Action<ExifProfile>? configure=null,string? xmp=null)
         {
@@ -160,6 +167,49 @@ public static class PrivacyTests
             Unknown(Privacy.Scan(["fixture.mov"],_=>throw new IOException("failed probe")),PrivacyScanState.Error);
             Unknown(Privacy.Scan(["fixture.mov"],_=>throw new OperationCanceledException()),PrivacyScanState.Error);
             foreach(var json in new[]{"invalid","{}","[]","{\"error\":{}}","{\"streams\":[]}","{\"format\":{\"tags\":null}}"}) Unknown(Video(json),PrivacyScanState.Error);
+        });
+        await Case("pre-canceled-scan-does-no-work",()=>
+        {
+            using var stop=new CancellationTokenSource();stop.Cancel();
+            int calls=0;
+            Canceled(()=>Privacy.Scan(["fixture.mov"],_=>{calls++;return "{\"format\":{}}";},stop.Token));
+            Assert(calls==0,"Pre-canceled scan started ffprobe");
+            Canceled(()=>Privacy.Scan(["fixture.mov"],stop.Token));
+            Canceled(()=>Privacy.Scan([],stop.Token));
+        });
+        await Case("caller-cancellation-stops-between-files",()=>
+        {
+            // Cover normal completion, a linked-token cancellation and a reader error
+            // racing with cancellation. None may start file two or return partial success.
+            foreach(var outcome in new[]{"returned","canceled","failed"})
+            {
+                using var stop=new CancellationTokenSource();int calls=0;
+                Canceled(()=>Privacy.Scan(["first.mov","second.mov"],file=>
+                {
+                    calls++;Assert(file=="first.mov","Scan continued into second file");
+                    stop.Cancel();
+                    if(outcome=="canceled")throw new OperationCanceledException(stop.Token);
+                    if(outcome=="failed")throw new IOException("Reader failed after cancellation");
+                    return "{\"format\":{\"tags\":{\"model\":\"Camera\"}}}";
+                },stop.Token));
+                Assert(calls==1,"Cancellation did not stop after the in-flight file");
+            }
+        });
+        await Case("caller-cancellation-on-last-file-is-not-success",()=>
+        {
+            using var stop=new CancellationTokenSource();
+            Canceled(()=>Privacy.Scan(["last.mov"],_=>{stop.Cancel();return "{\"format\":{}}";},stop.Token));
+        });
+        await Case("probe-timeout-keeps-caller-scan-running",()=>
+        {
+            using var stop=new CancellationTokenSource();int calls=0;
+            var result=Privacy.Scan(["timeout.mov","checked.mov"],_=>
+            {
+                if(++calls==1)throw new OperationCanceledException();
+                return "{\"format\":{}}";
+            },stop.Token);
+            Unknown(result,PrivacyScanState.Partial);
+            Assert(!stop.IsCancellationRequested && calls==2 && result.ErrorCount==1 && result.CheckedCount==1,"Probe timeout was treated as caller cancellation");
         });
         await Case("video-generic-dates-ignored",()=>
         {

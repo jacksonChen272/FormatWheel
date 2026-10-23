@@ -75,15 +75,16 @@ public class App : Application
     void Open(string[] files,bool drag,bool demo=false){if(wheel!=null)return;Output.Log($"wheel open files={files.Length} drag={drag}");wheel=new WheelWindow(files,drag,Execute,demo);wheel.Loaded+=(_,_)=>Output.Log($"wheel loaded visible={wheel?.IsVisible}");wheel.Closed+=(_,_)=>{Output.Log("wheel closed");wheel=null;};wheel.Show();if(!drag)wheel.Activate();}
     async void Execute(ActionItem action,string[] files)
     {
-        if(job!=null)return;job=new CancellationTokenSource();string title=action.DisplayLabel(files);var busy=Banner.Busy(title,()=>job?.Cancel());
+        if(job!=null)return;job=new CancellationTokenSource();var token=job.Token;string title=action.DisplayLabel(files);var busy=Banner.Busy(title,()=>job?.Cancel());
         try
         {
-            PrivacyResult? before=action.Id.EndsWith(".strip")?await Task.Run(()=>Privacy.Scan(files)):null;
-            var r=await Task.Run(()=>Engine.Run(action.Id,files,new Progress<string>(s=>Dispatcher.Invoke(()=>busy.Title=s)),job.Token));
+            PrivacyResult? before=action.Id.EndsWith(".strip")?await Task.Run(()=>Privacy.Scan(files,token),token):null;
+            var r=await Task.Run(()=>Engine.Run(action.Id,files,new Progress<string>(s=>Dispatcher.Invoke(()=>busy.Title=s)),token),token);
             if(r.Clipboard!=null)Clipboard.SetText(r.Clipboard);
             Settings.Current.Recents=r.Files.Concat(Settings.Current.Recents).Distinct().Take(20).ToList();Settings.Current.Save();
-            PrivacyResult? after=before!=null?await Task.Run(()=>Privacy.Scan(r.Files.ToArray())):null;
-            var sizes=await Task.Run(()=>ConversionFeedback.SizeChange(files,r.Files.ToArray()));
+            PrivacyResult? after=before!=null?await Task.Run(()=>Privacy.Scan(r.Files.ToArray(),token),token):null;
+            var sizes=await Task.Run(()=>ConversionFeedback.SizeChange(files,r.Files.ToArray()),token);
+            token.ThrowIfCancellationRequested();
             Sound.Play(action.Id);
             if(Settings.Current.Banner)ConversionFeedback.Show(title,r.Message+(r.Files.Count>0?L.T("\n儲存在：")+Path.GetDirectoryName(r.Files[0]):""),sizes,before,after);
         }

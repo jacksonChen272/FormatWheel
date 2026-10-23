@@ -91,6 +91,26 @@ public static class AssessmentTests
                 Assert(Metric(s.Evaluate(Catalog.All["img.to.png"]), "Frames retained").Target == 0, "first-frame-only operation hides animation loss");
                 return Task.CompletedTask;
             });
+            await check("assessment-later-frame-alpha-not-retained", async () =>
+            {
+                var path = Path.Combine(directory, "later-alpha.tiff");
+                using (var images = new MagickImageCollection())
+                {
+                    images.Add(new MagickImage(MagickColors.Red, 16, 12));
+                    images.Add(new MagickImage(MagickColors.Transparent, 16, 12));
+                    images.Write(path);
+                }
+                var s = FileAssessment.Read([path]);
+                Assert(s.Metadata[0].HasAlpha == true && s.Metadata[0].FirstFrameHasAlpha == false, "frame alpha fixture not read correctly");
+                foreach (var id in new[] { "img.to.png", "img.to.pdf" })
+                {
+                    var metric = Metric(s.Evaluate(Catalog.All[id]), "Alpha retained");
+                    Assert(metric.Base == 1 && metric.Target == 0, "later-frame alpha falsely retained");
+                }
+                var output = await Engine.Run("img.to.png", [path]);
+                using var actual = new MagickImage(output.Files.Single());
+                Assert(!actual.HasAlpha, "first-frame output disagrees with alpha prediction");
+            });
             await check("assessment-frame-cap-does-not-assume-no-alpha", () =>
             {
                 var path = Path.Combine(directory, "many-frames.gif");
