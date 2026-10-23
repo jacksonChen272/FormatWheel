@@ -1,6 +1,16 @@
-# Windows 0.2.2 validation — 2026-10-23 (Asia/Shanghai)
+# Windows 0.3.0 validation — 2026-10-23 (Asia/Shanghai)
 
 Independent Windows x64 preview. Upstream baseline: `1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`. Original MIT attribution and Swift source preserved.
+
+## 0.3.0 properties, comparisons and privacy stars
+
+- Added real image/PDF/media metadata inspection, immutable off-thread snapshots, a 24-file content-inspection cap, frame-count limits, bounded metadata reads and explicit unknown/error states. Format/codec bars are relative estimates, not measured quality or predicted byte counts. Generic file actions do not fabricate quality bars.
+- Added EXIF/XMP category deduplication, supported PDF/Word metadata weights, camera-date-only video scoring, partial/unsupported/error counts and output rescanning. Unknown or unsupported zero scores are never presented as verified clean. Clean-star animation requires every output to be checked successfully.
+- Expanded regression coverage: privacy weighting/states/batch/localization/rescan; real transparent/opaque/animated/corrupt/oversize image fixtures; no false quality upgrade; alpha loss and frame limits; PDF page order, alpha mask and batch count; metadata-only evaluation; actual FFprobe codecs; property-bar segments; measured output sizes; three-language WPF rendering at 1440 × 900 and 960 × 540 across all eight sectors, with bounded cards and center dismissal.
+- Testing found a real PNG-to-PDF compatibility issue: PDFsharp rejected some indexed transparent PNGs. Embedding now uses explicit PNG32 with orientation correction. Three-image PDF page count/order and the transparency soft mask are checked.
+- Computer Use at 125% DPI inspected Traditional Chinese image properties and five detected privacy stars, Shift switching to tools, the strip preview on the opposite side, English three-image PDF merging, card dismissal at the center, and Simplified Chinese video properties/GIF tradeoffs. Actual image stripping and three-image PDF conversion produced outputs. Completion-window visibility and dimensions were logged; this borderless notification was not listed by Computer Use, so its animation was not visually certified.
+- GUI tests used separate FORMATWHEEL_DATA profiles; the user's running 0.2.2 instance/settings were preserved. Explicit isolated profiles now have separate instance mutexes. No real personal documents were used for conversion tests.
+- Final standalone test counts, exact source commit, SHA-256 and CI URL are recorded in the release's test-report.json / RELEASE-MANIFEST.json. Earlier version results below are historical and retain their original scope.
 
 ## 0.2.2 tour layout
 

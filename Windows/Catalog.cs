@@ -10,6 +10,9 @@ public record ActionItem(string Id, string RawLabel, string RawDetail, string Ra
     public string Label => L.T(RawLabel);
     public string Detail => L.T(RawDetail);
     public string Ammo => L.T(RawAmmo);
+    public string DisplayLabel(string[] files) => Id=="img.to.pdf"&&files.Length>1?L.Text("合併成 PDF","Merge into PDF"):Label;
+    public string DisplayDetail(string[] files) => Id=="img.to.pdf"&&files.Length>1
+        ?string.Format(L.Text("{0} 張圖片 → 1 份 PDF，共 {0} 頁；依檔案順序，每張一頁。","{0} images → 1 PDF, {0} pages; one image per page, in file order."),files.Length):Detail;
     public string? Unavailable(string[] files)
     {
         if (Id == "pdf.merge" && files.Length < 2) return L.T("請同時拖入兩個以上 PDF");

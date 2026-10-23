@@ -62,7 +62,7 @@ public static class Engine
             if(id=="img.to.pdf"||id=="pdf.merge")
             {
                 string outFile=Path.Combine(tmp,"merged.pdf");using var pdf=new PdfDocument();
-                foreach(var f in files){cancel.ThrowIfCancellationRequested();if(id=="pdf.merge"){using var src=PdfReader.Open(f,PdfDocumentOpenMode.Import);foreach(var page in src.Pages)pdf.AddPage(page);}else {using var image=new MagickImage(f);using var stream=new MemoryStream(image.ToByteArray(MagickFormat.Png));AddImagePage(pdf,stream,image.Width,image.Height);}}
+                foreach(var f in files){cancel.ThrowIfCancellationRequested();if(id=="pdf.merge"){using var src=PdfReader.Open(f,PdfDocumentOpenMode.Import);foreach(var page in src.Pages)pdf.AddPage(page);}else {using var image=new MagickImage(f);image.AutoOrient();using var stream=new MemoryStream(image.ToByteArray(MagickFormat.Png32));AddImagePage(pdf,stream,image.Width,image.Height);}}
                 pdf.Save(outFile);outputs.Add(Output.Commit(outFile,files[0],"pdf",files.Length>1?L.T(" 合併"):""));return new(outputs,L.T("PDF 已建立"));
             }
             for(int i=0;i<files.Length;i++)

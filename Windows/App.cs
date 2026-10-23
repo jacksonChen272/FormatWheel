@@ -32,7 +32,10 @@ public class App : Application
         {
             int code=0;app.Startup+=async(_,_)=>{try{if(args[0]=="--self-test")await SelfTest.Run(args[1]);else if(args[0]=="--install-test"){var d=args[1]=="ffmpeg"?Dependencies.FFmpeg:Dependencies.LibreOffice;await Dependencies.Install(d,new Progress<InstallProgress>(p=>Output.Log(p.Message)),verifiedPackage:args.Length>2?args[2]:null);}else {var r=await Engine.Run(args[1],args.Skip(2).ToArray());File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"last-result.json"),JsonSerializer.Serialize(r));}}catch(Exception ex){code=1;File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"last-error.txt"),ex.ToString());}app.Shutdown(code);};app.Run();return code;
         }
-        using var mutex=new Mutex(true,"Local\\FormatWheel.Windows",out bool first);if(!first){MessageBox.Show(L.T("FormatWheel 已在系統匣執行。請從右下角圖示開啟。"),"FormatWheel");return 0;}
+        string instance="Local\\FormatWheel.Windows";
+        if(Environment.GetEnvironmentVariable("FORMATWHEEL_DATA") is string profile&&Path.IsPathFullyQualified(profile))
+            instance+="."+Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(profile).TrimEnd(Path.DirectorySeparatorChar).ToUpperInvariant())))[..16];
+        using var mutex=new Mutex(true,instance,out bool first);if(!first){MessageBox.Show(L.T("FormatWheel 已在系統匣執行。請從右下角圖示開啟。"),"FormatWheel");return 0;}
         app.DispatcherUnhandledException+=(_,e)=>{Output.Log(e.Exception.ToString());MessageBox.Show(e.Exception.Message,"FormatWheel");e.Handled=true;};
         app.Startup+=(_,_)=>app.Start(args);app.Run();return 0;
     }
@@ -72,8 +75,18 @@ public class App : Application
     void Open(string[] files,bool drag,bool demo=false){if(wheel!=null)return;Output.Log($"wheel open files={files.Length} drag={drag}");wheel=new WheelWindow(files,drag,Execute,demo);wheel.Loaded+=(_,_)=>Output.Log($"wheel loaded visible={wheel?.IsVisible}");wheel.Closed+=(_,_)=>{Output.Log("wheel closed");wheel=null;};wheel.Show();if(!drag)wheel.Activate();}
     async void Execute(ActionItem action,string[] files)
     {
-        if(job!=null)return;job=new CancellationTokenSource();var busy=Banner.Busy(action.Label,()=>job?.Cancel());
-        try{var r=await Task.Run(()=>Engine.Run(action.Id,files,new Progress<string>(s=>Dispatcher.Invoke(()=>busy.Title=s)),job.Token));if(r.Clipboard!=null)Clipboard.SetText(r.Clipboard);Settings.Current.Recents=r.Files.Concat(Settings.Current.Recents).Distinct().Take(20).ToList();Settings.Current.Save();Sound.Play(action.Id);if(Settings.Current.Banner)Banner.Show(true,action.Label,r.Message+(r.Files.Count>0?L.T("\n儲存在：")+Path.GetDirectoryName(r.Files[0]):""));}
+        if(job!=null)return;job=new CancellationTokenSource();string title=action.DisplayLabel(files);var busy=Banner.Busy(title,()=>job?.Cancel());
+        try
+        {
+            PrivacyResult? before=action.Id.EndsWith(".strip")?await Task.Run(()=>Privacy.Scan(files)):null;
+            var r=await Task.Run(()=>Engine.Run(action.Id,files,new Progress<string>(s=>Dispatcher.Invoke(()=>busy.Title=s)),job.Token));
+            if(r.Clipboard!=null)Clipboard.SetText(r.Clipboard);
+            Settings.Current.Recents=r.Files.Concat(Settings.Current.Recents).Distinct().Take(20).ToList();Settings.Current.Save();
+            PrivacyResult? after=before!=null?await Task.Run(()=>Privacy.Scan(r.Files.ToArray())):null;
+            var sizes=await Task.Run(()=>ConversionFeedback.SizeChange(files,r.Files.ToArray()));
+            Sound.Play(action.Id);
+            if(Settings.Current.Banner)ConversionFeedback.Show(title,r.Message+(r.Files.Count>0?L.T("\n儲存在：")+Path.GetDirectoryName(r.Files[0]):""),sizes,before,after);
+        }
         catch(OperationCanceledException){Banner.Show(false,L.T("已取消"),L.T("已完成的輸出檔案會保留"));}
         catch(Exception ex){Output.Log(ex.ToString());Sound.Play("failed");Banner.Show(false,action.Label,ex.Message);}
         finally{busy.Close();job.Dispose();job=null;}

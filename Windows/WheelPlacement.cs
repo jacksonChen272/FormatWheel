@@ -26,6 +26,10 @@ public static class WheelPlacement
     {
         double radius=Math.Min(requested,Math.Min(viewport.Width,viewport.Height)*.36);
         var center=dragging?new Point(Math.Clamp(cursor.X,radius+20,Math.Max(radius+20,viewport.Width-radius-20)),Math.Clamp(cursor.Y,radius+20,Math.Max(radius+20,viewport.Height-radius-20))):new Point(viewport.Width/2,viewport.Height/2);
+        // On narrow displays reserve a readable side column for the expanded card.
+        // Keep the ring inside the monitor; the hint still chooses the nearest free side.
+        if(!dragging&&viewport.Width-center.X-radius<408&&viewport.Width>=radius*2+428)
+            center.X=viewport.Width-radius-408;
         return (center,radius);
     }
 }

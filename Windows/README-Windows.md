@@ -1,4 +1,4 @@
-# FormatWheel for Windows — 0.2.2 preview
+# FormatWheel for Windows — 0.3.0 preview
 
 **[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/latest)**
 
@@ -7,6 +7,20 @@ English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET ins
 简体中文：下载 `FormatWheel-Windows-x64.exe` 后直接打开，无需另装 .NET。首次启动可切换语言、选择安装 FFmpeg / LibreOffice，并观看新手教学。暂时跳过后，也可右键点击系统托盘图标补装或重看教学。
 
 基於 [Elise616/FormatWheel](https://github.com/Elise616/FormatWheel) 的獨立 Windows 移植。原始基準：`1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`。原版 MIT 版權聲明完整保留。此版本不是原作者官方 Windows 發行，也不宣稱 100% 相同。
+
+## 0.3.0 屬性比較與通緝星級 / File comparisons and wanted stars
+
+- 選項旁的浮動面板顯示原檔大小、格式與可讀取的尺寸／影音資料，以及目前操作的影響。移開即隱藏；回到中心可查看檔案摘要。
+- 五段屬性條比較來源與結果：白色保留、藍色提升、紅色犧牲。畫質／音質是「本次轉換保留程度」，不是原檔品質測量；轉成無損格式不會恢復先前損失的細節。壓縮效率及相容性是相對預估，實際大小變化在完成後顯示。
+- 透明屬性依來源透明通道與實際轉換路徑評估。PDF 轉文字／Word 明確提示排版不保留；一般 EXE／複製路徑等不顯示虛構的品質條。
+- 多選圖片時 PDF 格子顯示「合併」，面板列出圖片數和頁數；每張圖片一頁，合成一份 PDF。
+- 通緝星級代表常見隱私中繼資料：GPS 兩星，裝置、拍攝時間、作者／序號各一星；PDF／DOCX 按作者等欄位計算。重複標籤只計一次。未支援、失敗、部分檢查與批次上限會明確標示，未知不當成零星。最多檢查 24 個檔案，批次顯示已檢查範圍與最高星級。
+- 指向去隱私時星星緩慢閃動；轉換後重新檢查，只有完整檢查確認清除的輸出才播放消退效果。圖片去隱私仍會重新編碼；星級只涵蓋常見中繼資料，不分析畫面或正文中的個資。
+- 繁體／簡體／英文均支援新面板。遵循系統減少動畫設定。
+
+English: Floating cards now compare source properties and expected conversion effects. Five-part bars show retained (white), gained (blue), and sacrificed (red) traits. Estimates are distinct from measured file metadata and the actual size change shown after conversion. Privacy stars reflect detected metadata, with explicit incomplete/unsupported states and an output rescan after stripping. Multiple images merge into one PDF, one image per page.
+
+简体中文：浮动面板加入文件属性与转换前后比较；白色保留、蓝色提升、红色牺牲。通缉星级按实际中继资料计算，未检查不当作零星，去隐私后重新检查。多图 PDF 显示合并数量与页数，转换完成后显示实际大小变化。
 
 ## 0.2.2 教學排版 / Roomier quick tour
 
