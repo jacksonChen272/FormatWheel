@@ -115,6 +115,8 @@ public static class FileAssessment
         if (files.Length > MaxInspectedFiles || metadata.Any(m => m.Kind is "img" or "pdf" or "vid" or "aud" && !m.Inspected))
             notices.Add(F("已檢查 {0}/{1} 個；未檢查的資料標為未知。", "Checked {0}/{1} files; uninspected metadata is unknown.", inspected, files.Length));
         if (metadata.Any(m => m.Error != null)) notices.Add(T("部分資料讀取失敗、逾時或超出限制；相關數值為未知。", "Some metadata failed, timed out or exceeded limits; values are unknown."));
+        if (metadata.Any(m => m.Format == "tiff" && m.Inspected && m.Error == null && (m.HasAlpha == null || m.FirstFrameHasAlpha == null)))
+            notices.Add(T("TIFF 透明通道無法由快速檢查確認，相關數值為未知。", "A quick TIFF inspection cannot confirm alpha; related values are unknown."));
         if (metadata.Any(m => m.IsDirectory)) notices.Add(T("資料夾不遞迴計算大小。", "Folder contents are not included in size totals."));
         if (metadata.Any(m => m.Format == "docx")) notices.Add(T("DOCX 頁數需實際排版；已略過快取頁數。", "DOCX pagination requires rendering; cached page counts are omitted."));
         if (files.Length > 1) notices.Add(T("批次資料有差異時顯示範圍或未知，不以單一檔案代表整批。", "Batch differences use ranges or unknown, never a representative file."));
@@ -155,8 +157,10 @@ public static class FileAssessment
         {
             Format = format,
             Width = checked((int)first.Width), Height = checked((int)first.Height),
-            HasAlpha = images.Any(im => im.HasAlpha) ? true : images.Count > MaxImageFrames ? null : false,
-            FirstFrameHasAlpha = first.HasAlpha,
+            // Magick 15 TIFF Ping can miss an existing alpha channel. A negative
+            // header-only result cannot establish absence without pixel decoding.
+            HasAlpha = images.Any(im => im.HasAlpha) ? true : format == "tiff" || images.Count > MaxImageFrames ? null : false,
+            FirstFrameHasAlpha = first.HasAlpha ? true : format == "tiff" ? null : false,
             FrameCount = images.Count <= MaxImageFrames ? images.Count : null,
             SwapsDimensions = (int)first.Orientation is >= 5 and <= 8
         };

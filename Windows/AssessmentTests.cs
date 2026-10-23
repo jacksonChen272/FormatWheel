@@ -93,11 +93,12 @@ public static class AssessmentTests
             });
             await check("assessment-later-frame-alpha-not-retained", async () =>
             {
-                var path = Path.Combine(directory, "later-alpha.tiff");
+                var path = Path.Combine(directory, "later-alpha.gif");
                 using (var images = new MagickImageCollection())
                 {
                     images.Add(new MagickImage(MagickColors.Red, 16, 12));
                     images.Add(new MagickImage(MagickColors.Transparent, 16, 12));
+                    foreach (var image in images) image.AnimationDelay = 10;
                     images.Write(path);
                 }
                 var s = FileAssessment.Read([path]);
@@ -110,6 +111,20 @@ public static class AssessmentTests
                 var output = await Engine.Run("img.to.png", [path]);
                 using var actual = new MagickImage(output.Files.Single());
                 Assert(!actual.HasAlpha, "first-frame output disagrees with alpha prediction");
+            });
+            await check("assessment-tiff-ping-cannot-prove-no-alpha", () =>
+            {
+                var path = Path.Combine(directory, "transparent-alpha.tiff");
+                using (var image = new MagickImage(MagickColors.Transparent, 16, 12)) image.Write(path);
+                using var decoded = new MagickImage(path);
+                Assert(decoded.HasAlpha && !decoded.IsOpaque, "TIFF fixture has no actual transparency");
+                var s = FileAssessment.Read([path]);
+                Assert(s.Metadata[0].Error == null && s.Metadata[0].HasAlpha != false, "TIFF Ping falsely proved absence of actual alpha");
+                var alpha = Metric(s.Evaluate(Catalog.All["img.to.png"]), "Alpha retained");
+                Assert(alpha.Base != 0 && alpha.Target != 0, "TIFF alpha underreported by header inspection");
+                if (alpha.Base == null || alpha.Target == null)
+                    Assert(s.Notices.Any(x => x.Contains("quick TIFF inspection")), "TIFF inspection limitation hidden");
+                return Task.CompletedTask;
             });
             await check("assessment-frame-cap-does-not-assume-no-alpha", () =>
             {
