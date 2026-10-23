@@ -15,7 +15,7 @@ public static class Assets
         lock(Gate)
         {
             if(Cached.TryGetValue(name,out var cached)&&System.IO.File.Exists(cached))return cached;
-            string directory=Path.Combine(Settings.Folder,"assets","0.3.0");Directory.CreateDirectory(directory);
+            string directory=Path.Combine(Settings.Folder,"assets","0.3.1");Directory.CreateDirectory(directory);
             string path=Path.Combine(directory,name);
             using var resource=Assembly.GetExecutingAssembly().GetManifestResourceStream("Assets."+name)??throw new FileNotFoundException("Missing built-in asset: "+name);
             var hash=SHA256.HashData(resource);resource.Position=0;
@@ -25,7 +25,7 @@ public static class Assets
     }
     public static string Notices()
     {
-        string directory=Path.Combine(Settings.Folder,"licenses","0.3.0");Directory.CreateDirectory(directory);var assembly=Assembly.GetExecutingAssembly();
+        string directory=Path.Combine(Settings.Folder,"licenses","0.3.1");Directory.CreateDirectory(directory);var assembly=Assembly.GetExecutingAssembly();
         foreach(string name in assembly.GetManifestResourceNames())if(name.StartsWith("Docs.")){using var input=assembly.GetManifestResourceStream(name)!;using var output=System.IO.File.Create(Path.Combine(directory,name[5..]));input.CopyTo(output);}
         return directory;
     }

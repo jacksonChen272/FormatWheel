@@ -1,6 +1,16 @@
-# Windows 0.3.0 validation — 2026-10-23 (Asia/Shanghai)
+# Windows 0.3.1 validation — 2026-10-23 (Asia/Shanghai)
 
 Independent Windows x64 preview. Upstream baseline: `1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`. Original MIT attribution and Swift source preserved.
+
+## 0.3.1 result banners
+
+- Removed only the property card's connector; the card still follows the hovered sector.
+- Success and failure share a rounded, centered banner with outlined Impact headings, full wrapped messages and output directories. Completion size measurements and verified privacy-star behavior are retained. Cancellation has a separate neutral heading.
+- Blur uses an in-memory desktop sample taken after hiding the progress window, with a 34-DIP blur clipped to the rounded panel. The sample is not saved or uploaded. Disabled blur or unavailable capture falls back to a translucent readable panel.
+- Native layered-window styles prevent activation and pass mouse input through. Success/cancellation close automatically at 5 seconds; failure at 8. Reduced animations retain automatic closing without fades.
+- New checks cover output-directory preservation, centered placement with negative monitor coordinates at 100–200% DPI, three-language rendering and full long-path text, transparent corners, native passive styles, and actual automatic window lifetime.
+- Computer Use inspected Traditional/Simplified Chinese and English previews, an actual transient failure banner, and a successful PNG-to-JPG conversion at 125% DPI. The actual success banner showed the source/action, measured sizes and full output folder; the failure banner showed visible blur and retained focus, then disappeared automatically. The HEIC hover card was visually checked without its connector. Input pass-through is verified by native layered-window styles; a manual preview click arrived after the banner expired and is not claimed as an active-overlay click-through test.
+- Earlier results below retain their original version and scope. Physical multi-monitor and the full global drag gesture are not newly certified by this patch.
 
 ## 0.3.0 properties, comparisons and privacy stars
 

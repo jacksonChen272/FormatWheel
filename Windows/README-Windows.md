@@ -1,4 +1,4 @@
-# FormatWheel for Windows — 0.3.0 preview
+# FormatWheel for Windows — 0.3.1 preview
 
 **[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/latest)**
 
@@ -7,6 +7,17 @@ English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET ins
 简体中文：下载 `FormatWheel-Windows-x64.exe` 后直接打开，无需另装 .NET。首次启动可切换语言、选择安装 FFmpeg / LibreOffice，并观看新手教学。暂时跳过后，也可右键点击系统托盘图标补装或重看教学。
 
 基於 [Elise616/FormatWheel](https://github.com/Elise616/FormatWheel) 的獨立 Windows 移植。原始基準：`1eb19a1903ffd26ef31a183b7a8f5ea14ae7e4cc`。原版 MIT 版權聲明完整保留。此版本不是原作者官方 Windows 發行，也不宣稱 100% 相同。
+
+## 0.3.1 完成提示 / Frosted result banners
+
+- 移除屬性面板與選項之間的藍色連接線。
+- 成功以金黃色 MISSION PASSED、失敗以紅色 WASTED 顯示；中央寬橫幅採用小圓角、磨砂模糊背景與清晰文字。
+- 保留來源檔名、目標格式、完成數量、實際大小變化、完整儲存資料夾路徑及錯誤訊息；長文字自動換行。
+- 成功約 5 秒、失敗約 8 秒後自動消失；無需點擊關閉，不搶焦點，滑鼠可穿透。遵循背景模糊與減少動畫設定。
+
+English: Rounded, frosted result banners with gold MISSION PASSED / red WASTED headings. Full messages and output folders remain visible. Success fades automatically after 5 seconds, failure after 8; banners do not take focus or intercept clicks. Removed the blue connector from property cards.
+
+简体中文：移除属性面板连接线，完成与失败提示改为圆角磨砂横幅，保留消息、大小变化与完整保存文件夹路径。成功约 5 秒、失败约 8 秒后自动消失，无需点击关闭，不抢焦点、不拦截鼠标。
 
 ## 0.3.0 屬性比較與通緝星級 / File comparisons and wanted stars
 

@@ -26,6 +26,7 @@ public class App : Application
     [STAThread] public static int Main(string[] args)
     {
         var app=new App{ShutdownMode=ShutdownMode.OnExplicitShutdown};
+        if(args.FirstOrDefault()=="--feedback-preview"){app.Startup+=(_,_)=>ResultBannerTests.Preview();app.Run();return 0;}
         if(args.FirstOrDefault()=="--ids"){File.WriteAllText(args.Length>1?args[1]:"actions.json",JsonSerializer.Serialize(Catalog.All.Values,new JsonSerializerOptions{WriteIndented=true}));return 0;}
         if(args.FirstOrDefault()=="--snapshot"){app.Snapshot(args[1],args.Contains("--weapons"));return 0;}
         if(args.FirstOrDefault()=="--self-test"||args.FirstOrDefault()=="--run"||args.FirstOrDefault()=="--install-test")
@@ -86,10 +87,11 @@ public class App : Application
             var sizes=await Task.Run(()=>ConversionFeedback.SizeChange(files,r.Files.ToArray()),token);
             token.ThrowIfCancellationRequested();
             Sound.Play(action.Id);
-            if(Settings.Current.Banner)ConversionFeedback.Show(title,r.Message+(r.Files.Count>0?L.T("\n儲存在：")+Path.GetDirectoryName(r.Files[0]):""),sizes,before,after);
+            busy.Hide();
+            if(Settings.Current.Banner)ConversionFeedback.Show(ConversionFeedback.Title(action,files),r.Message+(r.Files.Count>0?"\n"+ConversionFeedback.SavedLocations(r.Files.ToArray()):""),sizes,before,after);
         }
-        catch(OperationCanceledException){Banner.Show(false,L.T("已取消"),L.T("已完成的輸出檔案會保留"));}
-        catch(Exception ex){Output.Log(ex.ToString());Sound.Play("failed");Banner.Show(false,action.Label,ex.Message);}
+        catch(OperationCanceledException){busy.Hide();FeedbackBanner.ShowResult(FeedbackOutcome.Canceled,L.T("已取消"),L.T("已完成的輸出檔案會保留"));}
+        catch(Exception ex){busy.Hide();Output.Log(ex.ToString());Sound.Play("failed");Banner.Show(false,ConversionFeedback.Title(action,files),ex.Message);}
         finally{busy.Close();job.Dispose();job=null;}
     }
     void ShowSetup(){if(setup!=null){setup.Activate();return;}setup=new SetupWindow();setup.Closed+=(_,_)=>setup=null;setup.Show();}
@@ -114,8 +116,5 @@ public static class Banner
 {
     public static Window Busy(string title,Action cancel){var w=new Window{Title=title,Width=380,Height=130,Topmost=true,ResizeMode=ResizeMode.NoResize,WindowStartupLocation=WindowStartupLocation.CenterScreen};var stack=new StackPanel{Margin=new Thickness(16)};stack.Children.Add(new TextBlock{Text=L.T("正在轉換 · ")+title});stack.Children.Add(new ProgressBar{IsIndeterminate=true,Height=5,Margin=new Thickness(0,12,0,12)});var b=new Button{Content=L.T("取消")};b.Click+=(_,_)=>cancel();stack.Children.Add(b);w.Content=stack;w.Closing+=(_,_)=>cancel();w.Show();return w;}
     public static void Show(bool passed,string title,string detail)
-    {
-        var w=new Window{Title=title,Width=650,Height=240,WindowStyle=WindowStyle.None,AllowsTransparency=true,Background=new SolidColorBrush(Color.FromArgb(235,10,12,15)),Foreground=Brushes.White,Topmost=true,ShowInTaskbar=false,WindowStartupLocation=WindowStartupLocation.CenterScreen};var s=new StackPanel{Margin=new Thickness(24)};
-        s.Children.Add(new TextBlock{Text=passed?"MISSION PASSED":"WASTED",FontFamily=new FontFamily("Impact"),FontSize=52,Foreground=passed?Brushes.Gold:Brushes.IndianRed,HorizontalAlignment=HorizontalAlignment.Center});s.Children.Add(new TextBlock{Text=title,FontSize=18,TextAlignment=TextAlignment.Center});s.Children.Add(new TextBlock{Text=detail,FontSize=13,Margin=new Thickness(0,12,0,0),TextWrapping=TextWrapping.Wrap,TextTrimming=TextTrimming.CharacterEllipsis,MaxHeight=85,TextAlignment=TextAlignment.Center});w.Content=s;w.MouseDown+=(_,_)=>w.Close();w.Show();var t=new DispatcherTimer{Interval=TimeSpan.FromSeconds(passed?4:9)};t.Tick+=(_,_)=>{t.Stop();w.Close();};w.Closed+=(_,_)=>t.Stop();t.Start();
-    }
+        => FeedbackBanner.ShowResult(passed?FeedbackOutcome.Success:FeedbackOutcome.Failure,title,detail);
 }

@@ -78,8 +78,6 @@ public static class StatsPanel
         double scale=Math.Min(1,Math.Min(Math.Max(1,view.ActualWidth-24)/width,Math.Max(1,view.ActualHeight-32)/height));
         var bounds=WheelPlacement.Hint(view.Center,view.Radius,view.Hover,new Size(view.ActualWidth,view.ActualHeight),new Size(width*scale,height*scale));
         view.LastHintBounds=bounds;
-        var anchor=WheelCanvas.Polar(view.Center,view.Radius+3,view.Hover*Math.PI/4);
-        dc.DrawLine(new Pen(view.Accent,1.5),anchor,new Point(Math.Clamp(anchor.X,bounds.Left,bounds.Right),Math.Clamp(anchor.Y,bounds.Top,bounds.Bottom)));
         dc.PushTransform(new TranslateTransform(bounds.Left,bounds.Top));dc.PushTransform(new ScaleTransform(scale,scale));
         dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(250,20,24,33)),new Pen(view.Accent,1.5),new Rect(0,0,width,height),12,12);
         foreach(var draw in content)draw(dc);dc.Pop();dc.Pop();
