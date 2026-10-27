@@ -47,6 +47,17 @@ public static class SelfTest
         await Check("installer-hash-verification",async()=>await Dependencies.Verify(image,Convert.ToHexString(hash)));
         await Check("installer-cancellation",async()=>{using var c=new System.Threading.CancellationTokenSource();c.Cancel();try{await Dependencies.Verify(image,Convert.ToHexString(hash),c.Token);throw new Exception("ignored cancellation");}catch(OperationCanceledException){}});
         await Check("first-run-settings-roundtrip",()=>{var saved=new Settings{Language="en",SetupPromptSeen=true,TourSeen=true};var loaded=JsonSerializer.Deserialize<Settings>(JsonSerializer.Serialize(saved))!;Assert(loaded.Language=="en"&&loaded.SetupPromptSeen&&loaded.TourSeen,"lost onboarding state");Assert(!new Settings().SetupPromptSeen&&!new Settings().TourSeen,"new installation skipped onboarding");return Task.CompletedTask;});
+        await Check("cli-argument-validation",()=>{
+            Assert(App.ValidateCommandLine([])==null,"normal launch rejected");
+            Assert(App.ValidateCommandLine(["--ids"])==null,"optional ids output rejected");
+            Assert(App.ValidateCommandLine(["--snapshot"])!=null,"snapshot accepted without output");
+            Assert(App.ValidateCommandLine(["--self-test"])!=null,"self-test accepted without directory");
+            Assert(App.ValidateCommandLine(["--run","img.to.png"])!=null,"run accepted without input file");
+            Assert(App.ValidateCommandLine(["--run","img.to.png","photo.jpg"])==null,"valid run rejected");
+            Assert(App.ValidateCommandLine(["--install-test","wrong"])!=null,"unknown installer accepted");
+            Assert(App.ValidateCommandLine(["--install-test","ffmpeg"])==null,"valid installer rejected");
+            return Task.CompletedTask;
+        });
         await Check("drag-trigger-and-reset",()=>{var g=new DragGesture();Assert(!g.Update(true,false,new(10,10)),"fired on click");Assert(!g.Update(true,false,new(60,10)),"fired without Shift");Assert(g.Update(true,true,new(60,10)),"missed Shift during drag");Assert(!g.Update(true,true,new(80,10)),"duplicate trigger");g.Update(false,false,new(80,10));Assert(!g.Update(true,true,new(-1900,-100)),"fired before movement");Assert(g.Update(true,true,new(-1800,-100)),"missed held Shift / negative screen coordinates");return Task.CompletedTask;});
         foreach(double dpi in new[]{1.0,1.25,1.5,2.0})await Check("wheel-placement-dpi-"+dpi,()=>{var viewport=new System.Windows.Size(1920/dpi,1080/dpi);foreach(var p in new[]{new System.Windows.Point(0,0),new System.Windows.Point(viewport.Width,viewport.Height),new System.Windows.Point(-2000,300)}){var place=WheelPlacement.Place(p,viewport,330,true);Assert(place.Center.X-place.Radius>=0&&place.Center.Y-place.Radius>=0&&place.Center.X+place.Radius<=viewport.Width&&place.Center.Y+place.Radius<=viewport.Height,"wheel outside monitor");}return Task.CompletedTask;});
         if(Tool.Find("soffice")!=null)
