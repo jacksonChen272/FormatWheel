@@ -1,0 +1,70 @@
+name: Windows build and tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/windows-stability-20261027
+  pull_request:
+    branches:
+      - codex/windows-stability-20261027
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build portable and standalone Windows x64 packages
+        shell: pwsh
+        run: ./Windows/build.ps1
+
+      - name: Run standalone integration tests
+        shell: pwsh
+        run: |
+          $env:FORMATWHEEL_DATA = Join-Path $env:RUNNER_TEMP 'FormatWheel-tests'
+          $report = Join-Path $env:RUNNER_TEMP 'FormatWheel-results'
+          $exe = Join-Path $PWD 'Windows/release/FormatWheel-Windows-x64.exe'
+          $process = Start-Process -FilePath $exe -ArgumentList @('--self-test', ('"' + $report + '"')) -Wait -PassThru -WindowStyle Hidden
+          $reportFile = Join-Path $report 'report.json'
+          if (Test-Path $reportFile) {
+            Get-Content $reportFile
+          } else {
+            Write-Error "Self-test did not produce report.json"
+          }
+          if ($process.ExitCode -ne 0) {
+            throw "Self-test exited with code $($process.ExitCode)"
+          }
+          if (-not (Test-Path $reportFile)) {
+            throw 'Self-test report missing'
+          }
+
+      - name: Upload Windows packages
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FormatWheel-Windows-x64
+          path: Windows/release/
+          if-no-files-found: error
+
+      - name: Upload test report (including failures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FormatWheel-test-results
+          path: ${{ runner.temp }}/FormatWheel-results/report.json
+          if-no-files-found: warn
