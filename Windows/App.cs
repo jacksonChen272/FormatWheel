@@ -23,8 +23,24 @@ public class App : Application
     CancellationTokenSource? job;
     DispatcherTimer watcher=new(){Interval=TimeSpan.FromMilliseconds(16)};
     readonly DragGesture gesture=new();
+    // Validate command-line arguments before entering WPF startup handlers.
+    // Invalid CLI calls should return a useful exit code instead of crashing.
+    public static string? ValidateCommandLine(string[] args)
+    {
+        if(args.Length==0)return null;
+        return args[0] switch
+        {
+            "--snapshot" when args.Length<2 || string.IsNullOrWhiteSpace(args[1]) => "Usage: FormatWheel --snapshot <output.png> [--weapons]",
+            "--self-test" when args.Length<2 || string.IsNullOrWhiteSpace(args[1]) => "Usage: FormatWheel --self-test <output-directory>",
+            "--run" when args.Length<3 || string.IsNullOrWhiteSpace(args[1]) || args.Skip(2).Any(string.IsNullOrWhiteSpace) => "Usage: FormatWheel --run <action-id> <file> [more-files...]",
+            "--install-test" when args.Length<2 || (args[1]!="ffmpeg" && args[1]!="libreoffice") => "Usage: FormatWheel --install-test <ffmpeg|libreoffice> [verified-package]",
+            _ => null
+        };
+    }
     [STAThread] public static int Main(string[] args)
     {
+        var error=ValidateCommandLine(args);
+        if(error!=null){Console.Error.WriteLine(error);return 2;}
         var app=new App{ShutdownMode=ShutdownMode.OnExplicitShutdown};
         if(args.FirstOrDefault()=="--feedback-preview"){app.Startup+=(_,_)=>ResultBannerTests.Preview();app.Run();return 0;}
         if(args.FirstOrDefault()=="--ids"){File.WriteAllText(args.Length>1?args[1]:"actions.json",JsonSerializer.Serialize(Catalog.All.Values,new JsonSerializerOptions{WriteIndented=true}));return 0;}
