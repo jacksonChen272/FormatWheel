@@ -43,6 +43,14 @@ public static class SelfTest
         await Check("language-switch-without-restart",()=>{var previous=Settings.Current.Language;try{Settings.Current.Language="en";Assert(Catalog.All["img.compress"].Label=="Compress","English");Settings.Current.Language="zh-CN";Assert(Catalog.All["img.compress"].Label=="压缩","Simplified");Settings.Current.Language="zh-TW";Assert(Catalog.All["img.compress"].Label=="壓縮","Traditional");}finally{Settings.Current.Language=previous;}return Task.CompletedTask;});
         await Check("language-detection",()=>{Assert(L.Detect("en-GB")=="en"&&L.Detect("zh-HK")=="zh-TW"&&L.Detect("zh-CN")=="zh-CN","locale detection");return Task.CompletedTask;});
         await Check("simplified-text-termination",()=>{var resources=JsonSerializer.Deserialize<Dictionary<string,string>>(File.ReadAllText(Assets.File("en.json")))!;foreach(string key in resources.Keys)Assert(L.Simplify(key).Length==key.Length,"Unexpected characters: "+key);Assert(L.Simplify("安裝轉換工具。") == "安装转换工具。","Incorrect Simplified Chinese");return Task.CompletedTask;});
+        await Check("libreoffice-msi-space-paths",()=>{
+            string args=Dependencies.LibreOfficeMsiArguments(@"C:\Users\Test User\download.msi",
+                @"C:\Users\Test User\payload",@"C:\Users\Test User\install.log");
+            Assert(args.Contains("TARGETDIR=\"C:\\Users\\Test User\\payload\""),"MSI property path was not quoted");
+            Assert(args.Contains("/a \"C:\\Users\\Test User\\download.msi\""),"MSI package path was not quoted");
+            Assert(args.Contains("/log \"C:\\Users\\Test User\\install.log\""),"MSI log path was not quoted");
+            return Task.CompletedTask;
+        });
         await Check("installer-rejects-corrupt-download",async()=>{try{await Dependencies.Verify(image,Dependencies.FFmpeg.Hash);throw new Exception("accepted corrupted data");}catch(IOException){}});
         await Check("installer-hash-verification",async()=>await Dependencies.Verify(image,Convert.ToHexString(hash)));
         await Check("installer-cancellation",async()=>{using var c=new System.Threading.CancellationTokenSource();c.Cancel();try{await Dependencies.Verify(image,Convert.ToHexString(hash),c.Token);throw new Exception("ignored cancellation");}catch(OperationCanceledException){}});
