@@ -67,7 +67,26 @@ public static class Dependencies
                 // Administrative extraction creates a private application image; it does not
                 // register LibreOffice, replace the system installation, or change file associations.
                 string msi=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"msiexec.exe");
-                await Tool.Run(msi,["/a",archive,"/qn","/norestart","TARGETDIR="+payload,"/L*v",Path.Combine(Settings.Folder,"LibreOffice-install.log")]);
+                // MSI properties must be written as NAME="path" when the path contains
+                // spaces. ArgumentList quotes the entire argument instead, which is not
+                // equivalent for Windows Installer's property parser.
+                string log=Path.Combine(Settings.Folder,"LibreOffice-install.log");
+                string arguments=LibreOfficeMsiArguments(archive,payload,log);
+                Output.Log("LibreOffice MSI administrative extraction started; log: "+log);
+                var info=new System.Diagnostics.ProcessStartInfo(msi)
+                {
+                    Arguments=arguments,UseShellExecute=false,CreateNoWindow=true
+                };
+                using(var process=System.Diagnostics.Process.Start(info)??throw new IOException("Unable to start Windows Installer"))
+                {
+                    await process.WaitForExitAsync(CancellationToken.None);
+                    if(process.ExitCode!=0&&process.ExitCode!=3010)
+                    {
+                        Output.Log("LibreOffice MSI failed with exit code "+process.ExitCode+"; log: "+log);
+                        throw new IOException(L.Text("LibreOffice 安裝器失敗，代碼：","LibreOffice installer failed, code: ")+process.ExitCode+
+                            L.Text("。請查看：","; see: ")+log);
+                    }
+                }
                 // Keep bundled VC runtime private instead of installing it system-wide.
                 string runtime=Path.Combine(payload,"System64");
                 if(Directory.Exists(runtime))foreach(var dll in Directory.GetFiles(runtime,"*.dll")){var target=Path.Combine(payload,"program",Path.GetFileName(dll));if(!File.Exists(target))File.Copy(dll,target);}
@@ -86,6 +105,13 @@ public static class Dependencies
             progress.Report(new(L.Text("已安裝，可立即使用","Installed and ready to use"),100,false));
         }
         finally{Clean(stage);Gate.Release();}
+    }
+    public static string LibreOfficeMsiArguments(string archive,string payload,string log)
+    {
+        // Windows filenames cannot contain a double quote. Quote each path after
+        // the TARGETDIR= property name so msiexec recognizes spaces correctly.
+        static string Quote(string path) => "\"" + path.Replace("\"","") + "\"";
+        return "/a "+Quote(archive)+" /quiet /norestart TARGETDIR="+Quote(payload)+" /log "+Quote(log);
     }
     static void Clean(string path){try{string full=Path.GetFullPath(path);bool ownTool=full.StartsWith(Path.GetFullPath(Root)+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase);bool ownTemp=Path.GetDirectoryName(full)==Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar)&&Path.GetFileName(full).StartsWith("FormatWheel-install-",StringComparison.Ordinal);if(Directory.Exists(full)&&(ownTool||ownTemp))Directory.Delete(full,true);}catch(Exception e){Output.Log(e.Message);}}
 }
