@@ -46,12 +46,15 @@ public static class Dependencies
             if(verifiedPackage!=null)File.Copy(verifiedPackage,archive);else
             {
                 progress.Report(new(L.Text("正在下載","Downloading")+" · "+dependency.Name,0));
-                using var response=await Http.GetAsync(dependency.Url,HttpCompletionOption.ResponseHeadersRead,token);response.EnsureSuccessStatusCode();
-                if(response.RequestMessage?.RequestUri?.Scheme!="https")throw new IOException("HTTPS is required.");
-                await using var input=await response.Content.ReadAsStreamAsync(token);await using var output=File.Create(archive);
-                var buffer=new byte[131072];long total=0;int read;var last=DateTime.MinValue;
-                while((read=await input.ReadAsync(buffer,token))>0){total+=read;if(total>dependency.Bytes)throw new IOException("Unexpected download size.");await output.WriteAsync(buffer.AsMemory(0,read),token);if((DateTime.UtcNow-last).TotalMilliseconds>150){progress.Report(new($"{L.Text("正在下載","Downloading")} {dependency.Name} · {total/1048576.0:F1} / {dependency.Bytes/1048576.0:F1} MB",total*100.0/dependency.Bytes));last=DateTime.UtcNow;}}
-                if(total!=dependency.Bytes)throw new IOException(L.Text("下載未完成，請重試。","The download is incomplete. Please retry."));
+                if(new Uri(dependency.Url).Scheme!=Uri.UriSchemeHttps)throw new IOException("HTTPS is required.");
+                var last=DateTime.MinValue;
+                await DownloadWithRetries(Http,dependency.Url,archive,dependency.Bytes,(total,attempt)=>{
+                    if((DateTime.UtcNow-last).TotalMilliseconds>150||total==dependency.Bytes){
+                        progress.Report(new($"{L.Text("正在下載","Downloading")} {dependency.Name} · {total/1048576.0:F1} / {dependency.Bytes/1048576.0:F1} MB"+
+                            (attempt>1?$" ({L.Text("重試","retry")} {attempt}/4)":""),total*100.0/dependency.Bytes));
+                        last=DateTime.UtcNow;
+                    }
+                },token);
             }
             progress.Report(new(L.Text("正在校驗下載檔案","Verifying download")));
             await Verify(archive,dependency.Hash,token);token.ThrowIfCancellationRequested();
@@ -105,6 +108,59 @@ public static class Dependencies
             progress.Report(new(L.Text("已安裝，可立即使用","Installed and ready to use"),100,false));
         }
         finally{Clean(stage);Gate.Release();}
+    }
+    // Resume interrupted downloads; never keep more than the expected number of bytes.
+    // A server that ignores HTTP Range requests forces a safe restart at byte zero.
+    public static async Task DownloadWithRetries(HttpClient client,string url,string path,long expectedBytes,Action<long,int>? onProgress,CancellationToken token=default)
+    {
+        const int maxAttempts=4;
+        if(expectedBytes<=0)throw new ArgumentOutOfRangeException(nameof(expectedBytes));
+        long total=File.Exists(path)?new FileInfo(path).Length:0;
+        if(total>expectedBytes){File.Delete(path);total=0;}
+        if(total==expectedBytes)return;
+        for(int attempt=1;attempt<=maxAttempts;attempt++)
+        {
+            token.ThrowIfCancellationRequested();
+            try
+            {
+                using var request=new HttpRequestMessage(HttpMethod.Get,url);
+                if(total>0)request.Headers.Range=new System.Net.Http.Headers.RangeHeaderValue(total,null);
+                using var response=await client.SendAsync(request,HttpCompletionOption.ResponseHeadersRead,token);
+                response.EnsureSuccessStatusCode();
+                if(response.RequestMessage?.RequestUri?.Scheme!=Uri.UriSchemeHttps)throw new IOException("HTTPS is required.");
+                if(total>0&&response.StatusCode==System.Net.HttpStatusCode.PartialContent)
+                {
+                    var range=response.Content.Headers.ContentRange;
+                    if(range?.From!=total||range.Length!=expectedBytes)
+                        throw new InvalidDataException("Server returned an invalid resume range.");
+                }
+                else if(response.StatusCode==System.Net.HttpStatusCode.OK)total=0;
+                else throw new InvalidDataException("Server returned an unexpected download status.");
+                await using(var output=new FileStream(path,total==0?FileMode.Create:FileMode.Append,FileAccess.Write,FileShare.None,131072,true))
+                await using(var input=await response.Content.ReadAsStreamAsync(token))
+                {
+                    var buffer=new byte[131072];int read;
+                    while((read=await input.ReadAsync(buffer.AsMemory(),token))>0)
+                    {
+                        if(total+read>expectedBytes)throw new InvalidDataException("Unexpected download size.");
+                        await output.WriteAsync(buffer.AsMemory(0,read),token);
+                        total+=read;onProgress?.Invoke(total,attempt);
+                    }
+                }
+                if(total==expectedBytes)return;
+                throw new IOException("Download ended before all bytes were received.");
+            }
+            catch(Exception e) when(attempt<maxAttempts&&!token.IsCancellationRequested&&
+                (e is HttpRequestException||e is IOException||e is TaskCanceledException))
+            {
+                // Stream disposed before retry; resume from actual file length.
+                total=File.Exists(path)?new FileInfo(path).Length:0;
+                Output.Log("Dependency download attempt "+attempt+" failed: "+e.Message);
+                await Task.Delay(TimeSpan.FromSeconds(attempt*2),token);
+            }
+        }
+        throw new IOException(L.Text("下載連線中斷，重試後仍未完成。請切換網路再試一次。","Download interrupted despite retries. Try another network.")+
+            " ("+total+" / "+expectedBytes+" bytes)");
     }
     public static string LibreOfficeMsiArguments(string archive,string payload,string log)
     {
