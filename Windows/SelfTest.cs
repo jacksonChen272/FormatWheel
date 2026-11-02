@@ -51,6 +51,24 @@ public static class SelfTest
             Assert(args.Contains("/log \"C:\\Users\\Test User\\install.log\""),"MSI log path was not quoted");
             return Task.CompletedTask;
         });
+        await Check("dependency-download-resumes-after-short-response",async()=>{
+            var data=Enumerable.Range(0,120000).Select(i=>(byte)(i%251)).ToArray();
+            var handler=new InterruptedDownloadHandler(data,false);
+            using var client=new System.Net.Http.HttpClient(handler);
+            string path=Path.Combine(root,"resume-download.bin");
+            await Dependencies.DownloadWithRetries(client,"https://example.test/package.zip",path,data.LongLength,null);
+            Assert(File.ReadAllBytes(path).SequenceEqual(data),"resumed download contents differ");
+            Assert(handler.Requests==2&&handler.ResumeOffset==32768,"resume did not request remaining bytes");
+        });
+        await Check("dependency-download-restarts-if-server-ignores-range",async()=>{
+            var data=Enumerable.Range(0,120000).Select(i=>(byte)(i%241)).ToArray();
+            var handler=new InterruptedDownloadHandler(data,true);
+            using var client=new System.Net.Http.HttpClient(handler);
+            string path=Path.Combine(root,"restart-download.bin");
+            await Dependencies.DownloadWithRetries(client,"https://example.test/package.zip",path,data.LongLength,null);
+            Assert(File.ReadAllBytes(path).SequenceEqual(data),"server-ignored-range download differs");
+            Assert(handler.Requests==2&&handler.ResumeOffset==32768,"expected Range request was not sent");
+        });
         await Check("installer-rejects-corrupt-download",async()=>{try{await Dependencies.Verify(image,Dependencies.FFmpeg.Hash);throw new Exception("accepted corrupted data");}catch(IOException){}});
         await Check("installer-hash-verification",async()=>await Dependencies.Verify(image,Convert.ToHexString(hash)));
         await Check("installer-cancellation",async()=>{using var c=new System.Threading.CancellationTokenSource();c.Cancel();try{await Dependencies.Verify(image,Convert.ToHexString(hash),c.Token);throw new Exception("ignored cancellation");}catch(OperationCanceledException){}});
@@ -76,4 +94,40 @@ public static class SelfTest
         }
         if(failed>0)throw new Exception($"{failed} integration checks failed. See report.json.");
     }
+    private sealed class InterruptedDownloadHandler : System.Net.Http.HttpMessageHandler
+    {
+        private readonly byte[] data;
+        private readonly bool ignoreRange;
+        public int Requests {get;private set;}
+        public long? ResumeOffset {get;private set;}
+        public InterruptedDownloadHandler(byte[] data,bool ignoreRange)
+        {
+            this.data=data;this.ignoreRange=ignoreRange;
+        }
+        protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(System.Net.Http.HttpRequestMessage request,System.Threading.CancellationToken cancellationToken)
+        {
+            Requests++;
+            System.Net.Http.HttpResponseMessage response;
+            if(Requests==1)
+            {
+                response=new(System.Net.HttpStatusCode.OK){Content=new System.Net.Http.ByteArrayContent(data[..32768])};
+            }
+            else
+            {
+                ResumeOffset=request.Headers.Range?.Ranges.Single().From;
+                if(ResumeOffset!=32768)throw new InvalidOperationException("Download did not resume from the interrupted offset.");
+                if(ignoreRange)
+                {
+                    response=new(System.Net.HttpStatusCode.OK){Content=new System.Net.Http.ByteArrayContent(data)};
+                }
+                else
+                {
+                    response=new(System.Net.HttpStatusCode.PartialContent){Content=new System.Net.Http.ByteArrayContent(data[(int)ResumeOffset.Value..])};
+                    response.Content.Headers.ContentRange=new System.Net.Http.Headers.ContentRangeHeaderValue(ResumeOffset.Value,data.LongLength-1,data.LongLength);
+                }
+            }
+            return Task.FromResult(response);
+        }
+    }
+
 }
