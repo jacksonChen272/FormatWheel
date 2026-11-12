@@ -30,13 +30,13 @@ public class Settings
 }
 public static class Tool
 {
-    public static string? Find(string name)
+    public static string? Find(string name,bool includePath=true)
     {
         var dirs=new List<string>{Path.Combine(AppContext.BaseDirectory,"tools",name),Path.Combine(AppContext.BaseDirectory,"tools",name,"bin"),Path.Combine(AppContext.BaseDirectory,"tools")};
         dirs.Insert(0,Path.Combine(Settings.Folder,"tools",name=="soffice"?"libreoffice":"ffmpeg",name=="soffice"?"program":"bin"));
         if(name=="ffprobe") {dirs.Add(Path.Combine(AppContext.BaseDirectory,"tools","ffmpeg"));dirs.Add(Path.Combine(AppContext.BaseDirectory,"tools","ffmpeg","bin"));}
         if(name=="soffice") {dirs.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"LibreOffice","program"));}
-        dirs.AddRange((Environment.GetEnvironmentVariable("PATH")??"").Split(Path.PathSeparator));
+        if(includePath)dirs.AddRange((Environment.GetEnvironmentVariable("PATH")??"").Split(Path.PathSeparator));
         if(name=="soffice")return dirs.SelectMany(d=>new[]{Path.Combine(d,"soffice.com"),Path.Combine(d,"soffice.exe")}).FirstOrDefault(File.Exists);
         return dirs.Select(d=>Path.Combine(d,name+".exe")).FirstOrDefault(File.Exists);
     }

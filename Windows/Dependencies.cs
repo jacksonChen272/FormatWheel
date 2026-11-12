@@ -18,15 +18,15 @@ public static class Dependencies
     static readonly SemaphoreSlim Gate=new(1,1);
     static readonly HttpClient Http=new(new HttpClientHandler{AllowAutoRedirect=true}){Timeout=TimeSpan.FromMinutes(30)};
     public static string Root => Path.Combine(Settings.Folder,"tools");
-    public static async Task<bool> Ready(Dependency dependency,CancellationToken token=default)
+    public static Task<bool> Ready(Dependency dependency,CancellationToken token=default)
     {
-        var path=Tool.Find(dependency.Executable);if(path==null)return false;
-        try{using var limit=CancellationTokenSource.CreateLinkedTokenSource(token);limit.CancelAfter(TimeSpan.FromSeconds(20));
-            string result=await Tool.Run(path,[dependency.Id=="ffmpeg"?"-version":"--version"],limit.Token);
-            if(!result.Contains(dependency.Name,StringComparison.OrdinalIgnoreCase))return false;
-            if(dependency.Id=="ffmpeg")return Tool.Find("ffprobe") is string probe && (await Tool.Run(probe,["-version"],limit.Token)).Contains("ffprobe version");
-            return true;
-        }catch{return false;}
+        token.ThrowIfCancellationRequested();
+        // SetupWindow calls this during first-run UI initialization. Detection must not
+        // execute arbitrary programs found through PATH before the user asks to convert.
+        var path=Tool.Find(dependency.Executable,includePath:false);
+        if(path==null)return Task.FromResult(false);
+        if(dependency.Id=="ffmpeg")return Task.FromResult(File.Exists(Path.Combine(Path.GetDirectoryName(path)!,"ffprobe.exe")));
+        return Task.FromResult(true);
     }
     public static async Task Verify(string path,string expected,CancellationToken token=default)
     {

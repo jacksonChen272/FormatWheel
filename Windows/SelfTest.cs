@@ -51,11 +51,47 @@ public static class SelfTest
             Assert(args.Contains("/log \"C:\\Users\\Test User\\install.log\""),"MSI log path was not quoted");
             return Task.CompletedTask;
         });
+        await Check("automatic-tool-detection-excludes-path",async()=>{
+            string originalPath=Environment.GetEnvironmentVariable("PATH")??"";
+            string probeRoot=Path.Combine(root,"untrusted-path-"+Guid.NewGuid().ToString("N"));
+            string probeName="formatwheel-untrusted-"+Guid.NewGuid().ToString("N");
+            Directory.CreateDirectory(probeRoot);File.WriteAllText(Path.Combine(probeRoot,probeName+".exe"),"not an executable");
+            try
+            {
+                Environment.SetEnvironmentVariable("PATH",probeRoot+Path.PathSeparator+originalPath);
+                Assert(Tool.Find(probeName)!=null,"test PATH executable was not discovered");
+                Assert(Tool.Find(probeName,includePath:false)==null,"automatic detection accepted an executable from PATH");
+
+                string originalData=Environment.GetEnvironmentVariable("FORMATWHEEL_DATA")??"";
+                string managedRoot=Path.Combine(root,"managed-probe-"+Guid.NewGuid().ToString("N"));
+                try
+                {
+                    Environment.SetEnvironmentVariable("FORMATWHEEL_DATA",managedRoot);
+                    string bin=Path.Combine(Dependencies.Root,"ffmpeg","bin");Directory.CreateDirectory(bin);
+                    File.WriteAllText(Path.Combine(bin,"ffmpeg.exe"),"not an executable");
+                    File.WriteAllText(Path.Combine(bin,"ffprobe.exe"),"not an executable");
+                    Assert(await Dependencies.Ready(Dependencies.FFmpeg),"managed tool files were not detected without execution");
+                }
+                finally
+                {
+                    Environment.SetEnvironmentVariable("FORMATWHEEL_DATA",string.IsNullOrEmpty(originalData)?null:originalData);
+                    if(Directory.Exists(managedRoot))Directory.Delete(managedRoot,true);
+                }
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("PATH",originalPath);
+                if(Directory.Exists(probeRoot))Directory.Delete(probeRoot,true);
+            }
+        });
+        string downloadRoot=Path.Combine(root,"dependency-download-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(downloadRoot);
+        try
+        {
         await Check("dependency-download-resumes-after-short-response",async()=>{
             var data=Enumerable.Range(0,120000).Select(i=>(byte)(i%251)).ToArray();
             var handler=new InterruptedDownloadHandler(data,false);
             using var client=new System.Net.Http.HttpClient(handler);
-            string path=Path.Combine(root,"resume-download.bin");
+            string path=Path.Combine(downloadRoot,"resume-download.bin");
             await Dependencies.DownloadWithRetries(client,"https://example.test/package.zip",path,data.LongLength,null);
             Assert(File.ReadAllBytes(path).SequenceEqual(data),"resumed download contents differ");
             Assert(handler.Requests==2&&handler.ResumeOffset==32768,"resume did not request remaining bytes");
@@ -64,11 +100,13 @@ public static class SelfTest
             var data=Enumerable.Range(0,120000).Select(i=>(byte)(i%241)).ToArray();
             var handler=new InterruptedDownloadHandler(data,true);
             using var client=new System.Net.Http.HttpClient(handler);
-            string path=Path.Combine(root,"restart-download.bin");
+            string path=Path.Combine(downloadRoot,"restart-download.bin");
             await Dependencies.DownloadWithRetries(client,"https://example.test/package.zip",path,data.LongLength,null);
             Assert(File.ReadAllBytes(path).SequenceEqual(data),"server-ignored-range download differs");
             Assert(handler.Requests==2&&handler.ResumeOffset==32768,"expected Range request was not sent");
         });
+        }
+        finally{if(Directory.Exists(downloadRoot))Directory.Delete(downloadRoot,true);}
         await Check("installer-rejects-corrupt-download",async()=>{try{await Dependencies.Verify(image,Dependencies.FFmpeg.Hash);throw new Exception("accepted corrupted data");}catch(IOException){}});
         await Check("installer-hash-verification",async()=>await Dependencies.Verify(image,Convert.ToHexString(hash)));
         await Check("installer-cancellation",async()=>{using var c=new System.Threading.CancellationTokenSource();c.Cancel();try{await Dependencies.Verify(image,Convert.ToHexString(hash),c.Token);throw new Exception("ignored cancellation");}catch(OperationCanceledException){}});
@@ -115,7 +153,7 @@ public static class SelfTest
             else
             {
                 ResumeOffset=request.Headers.Range?.Ranges.Single().From;
-                if(ResumeOffset!=32768)throw new InvalidOperationException("Download did not resume from the interrupted offset.");
+                if(ResumeOffset!=32768)throw new InvalidOperationException("Download did not resume from the interrupted offset; actual offset: "+(ResumeOffset?.ToString()??"none"));
                 if(ignoreRange)
                 {
                     response=new(System.Net.HttpStatusCode.OK){Content=new System.Net.Http.ByteArrayContent(data)};
@@ -126,6 +164,7 @@ public static class SelfTest
                     response.Content.Headers.ContentRange=new System.Net.Http.Headers.ContentRangeHeaderValue(ResumeOffset.Value,data.LongLength-1,data.LongLength);
                 }
             }
+            response.RequestMessage=request;
             return Task.FromResult(response);
         }
     }
