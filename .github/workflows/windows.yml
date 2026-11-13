@@ -53,11 +53,30 @@ jobs:
             throw 'Self-test report missing'
           }
 
-      - name: Upload Windows packages
-        if: success()
+      # Never expose signing credentials to pull_request workflows.
+      # Signing is opt-in, and a missing certificate fails the job rather than
+      # silently publishing an artifact labeled as signed.
+      - name: Authenticode sign Windows release (opt-in)
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/codex/windows-stability-20261027' && vars.FORMATWHEEL_ENABLE_SIGNING == 'true' }}
+        shell: pwsh
+        env:
+          FORMATWHEEL_SIGNING_PFX_BASE64: ${{ secrets.FORMATWHEEL_SIGNING_PFX_BASE64 }}
+          FORMATWHEEL_SIGNING_PFX_PASSWORD: ${{ secrets.FORMATWHEEL_SIGNING_PFX_PASSWORD }}
+        run: ./Windows/sign-release.ps1
+
+      - name: Upload signed Windows packages
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/windows-stability-20261027' && vars.FORMATWHEEL_ENABLE_SIGNING == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: FormatWheel-Windows-x64
+          name: FormatWheel-Windows-x64-SIGNED
+          path: Windows/release/
+          if-no-files-found: error
+
+      - name: Upload unsigned Windows test packages
+        if: ${{ success() && !(github.event_name == 'push' && github.ref == 'refs/heads/codex/windows-stability-20261027' && vars.FORMATWHEEL_ENABLE_SIGNING == 'true') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: FormatWheel-Windows-x64-UNSIGNED
           path: Windows/release/
           if-no-files-found: error
 
