@@ -120,10 +120,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Download compiled Windows package
+      - name: Download compiled unsigned Windows package
         uses: actions/download-artifact@v4
         with:
-          name: FormatWheel-Windows-x64
+          name: FormatWheel-Windows-x64-UNSIGNED
           path: unsigned-build
 
       - name: Confirm signing integration is configured
