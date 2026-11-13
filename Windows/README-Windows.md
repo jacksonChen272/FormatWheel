@@ -2,7 +2,7 @@
 
 **[Download Windows EXE / 下載 / 下载](https://github.com/rickuuyu-create/FormatWheel/releases/latest)**
 
-English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET installation is needed. On first launch, choose English / 繁體中文 / 简体中文, optionally install FFmpeg and LibreOffice, then follow the eight-step tour. Right-click the tray icon (or home window) to install tools later; the tray menu also offers language selection and tour replay/reset. The EXE is unsigned. This is an independent community Windows preview, not an official upstream release.
+English: Download `FormatWheel-Windows-x64.exe` and run it. No separate .NET installation is needed. On first launch, choose English / 繁體中文 / 简体中文, optionally install FFmpeg and LibreOffice, then follow the eight-step tour. Right-click the tray icon (or home window) to install tools later; the tray menu also offers language selection and tour replay/reset. Ordinary CI builds are unsigned. Trusted code signing is opt-in and requires a valid signing certificate; see [SIGNING.md](SIGNING.md). This is an independent community Windows preview, not an official upstream release.
 
 简体中文：下载 `FormatWheel-Windows-x64.exe` 后直接打开，无需另装 .NET。首次启动可切换语言、选择安装 FFmpeg / LibreOffice，并观看新手教学。暂时跳过后，也可右键点击系统托盘图标补装或重看教学。
 
@@ -88,7 +88,7 @@ Windows 10 2004（19041）或更新版本，x64。下載單檔 `FormatWheel-Wind
 - 圖片去隱私會重新編碼。PDF 去隱私移除文件資訊與文件／頁面 XMP；DOCX 去隱私移除作者等屬性。這些功能不刪除正文、註解、附件、修訂內容或像素中的個資，不代表匿名化。
 - 影片去隱私清除容器／串流 metadata 與章節；不保證清除所有編碼器特有標記。
 - 長圖每段最多 15,000 像素；GIF 輸出為單張圖，圖片動畫不保證保留。去背與轉換結果可能與原版不同。
-- 已驗證 LibreOffice PDF、DOCX、RTF、ODT、DOC 輸出及文字讀回。ARM64／x86 不支援，本版沒有程式碼簽章；Windows 可能顯示未知發行者。此發行為 x64 預覽版。
+- 已驗證 LibreOffice PDF、DOCX、RTF、ODT、DOC 輸出及文字讀回。ARM64／x86 不支援，一般 CI 測試版未簽章；僅在設定可信任簽章憑證並啟用簽章工作流程後，才會產生標示為 SIGNED 的發行檔。詳見 [SIGNING.md](SIGNING.md)。此發行為 x64 預覽版。
 - 本次測試環境只有一個啟用中的螢幕。四種 DPI 的邊界計算通過自動測試，實際雙螢幕與混合 DPI 的跨螢幕拖曳仍未驗證。Computer Use API 不提供「維持拖曳同時按 Shift」的組合操作，全域手勢的完整端到端驗證仍待實體操作；已測試觸發狀態與輪盤點選轉換。
 
 ## 建置與測試
