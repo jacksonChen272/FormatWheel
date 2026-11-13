@@ -68,3 +68,78 @@ jobs:
           name: FormatWheel-test-results
           path: ${{ runner.temp }}/FormatWheel-results/report.json
           if-no-files-found: warn
+
+  # Explicitly opt-in to release signing. This does not run for pushes or PRs.
+  # Approval and a CA-trusted certificate must be configured at SignPath first.
+  sign-release:
+    name: Sign Windows EXE (SignPath)
+    needs: build-and-test
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/windows-stability-20261027' && vars.SIGNPATH_ENABLED == 'true' }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Download compiled Windows package
+        uses: actions/download-artifact@v4
+        with:
+          name: FormatWheel-Windows-x64
+          path: unsigned-build
+
+      - name: Confirm signing integration is configured
+        shell: pwsh
+        env:
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          SIGNPATH_POLICY_SLUG: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          foreach ($name in @('SIGNPATH_ORGANIZATION_ID','SIGNPATH_PROJECT_SLUG','SIGNPATH_POLICY_SLUG','SIGNPATH_API_TOKEN')) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              throw "Missing signing configuration: $name. See Windows/CODE_SIGNING.md"
+            }
+          }
+          if (!(Test-Path 'unsigned-build/FormatWheel-Windows-x64.exe')) {
+            throw 'Expected Windows EXE is missing.'
+          }
+
+      - name: Upload EXE for signing (not a release)
+        id: signing-input
+        uses: actions/upload-artifact@v4
+        with:
+          name: FormatWheel-signing-input-unsigned
+          path: unsigned-build/FormatWheel-Windows-x64.exe
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Request CA-trusted code signing
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.signing-input.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed-output
+
+      - name: Verify Authenticode signature and prepare release
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem 'signed-output' -Recurse -File -Filter 'FormatWheel-Windows-x64.exe')
+          if ($files.Count -ne 1) { throw "Expected exactly one signed Windows EXE, found $($files.Count)." }
+          $sig = Get-AuthenticodeSignature -FilePath $files[0].FullName
+          if ($sig.Status -ne 'Valid') {
+            throw "Unsigned or untrusted EXE returned from signing provider: $($sig.Status)"
+          }
+          New-Item -ItemType Directory -Force 'signed-release' | Out-Null
+          Copy-Item $files[0].FullName 'signed-release/FormatWheel-Windows-x64.exe'
+          $hash = (Get-FileHash 'signed-release/FormatWheel-Windows-x64.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  FormatWheel-Windows-x64.exe" | Set-Content 'signed-release/SHA256SUMS.txt' -Encoding ascii
+
+      - name: Upload verified signed EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: FormatWheel-Windows-x64-SIGNED
+          path: signed-release/
+          if-no-files-found: error
