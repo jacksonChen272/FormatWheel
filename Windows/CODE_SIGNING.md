@@ -22,7 +22,7 @@ Azure Artifact Signing 對個人帳號有國家/地區資格限制，台灣個�
 5. 到 Actions → Windows build and tests，手動 **Run workflow**，選擇 `codex/windows-stability-20261027`。成功通過一般 build-and-test 後，才會進入需要授權的 SignPath 簽章 job。
 6. 只有當 SignPath 簽章完成、回傳檔案，並通過 Windows `Get-AuthenticodeSignature` 的 `Valid` 驗證時，才會產生 **FormatWheel-Windows-x64-SIGNED** artifact。
 
-此簽章工作只在手動觸發且 GitHub 變數 `SIGNPATH_ENABLED=true` 時執行；`push` 與 `pull_request` 繼續執行普通 CI，不會消耗正式簽章額度。簽章來源 `FormatWheel-signing-input-unsigned` **並不是簽章版**，不可混淆。原有 `FormatWheel-Windows-x64` artifact 也維持未簽章。
+此簽章工作只在手動觸發且 GitHub 變數 `SIGNPATH_ENABLED=true` 時執行；`push` 與 `pull_request` 繼續執行普通 CI，不會消耗正式簽章額度。簽章來源 `FormatWheel-signing-input-unsigned` **並不是簽章版**，不可混淆。一般 CI 產物名稱為 `FormatWheel-Windows-x64-UNSIGNED`，仍未簽章。另一套 `FORMATWHEEL_ENABLE_SIGNING` / PFX 方案也存在於專案中，但需要真正受信任且可匯出的憑證；目前以 SignPath 作為建議的雲端簽章方式。不要同時啟用兩套發行簽章設定。
 
 ## 驗證與注意事項
 
