@@ -53,6 +53,27 @@ jobs:
             throw 'Self-test report missing'
           }
 
+      - name: Validate signing script and fail-closed behavior
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'Windows/sign-release.ps1'),
+            [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.ToString() }
+            throw 'Signing script has PowerShell syntax errors.'
+          }
+          Remove-Item Env:FORMATWHEEL_SIGNING_PFX_BASE64 -ErrorAction SilentlyContinue
+          Remove-Item Env:FORMATWHEEL_SIGNING_PFX_PASSWORD -ErrorAction SilentlyContinue
+          try {
+            ./Windows/sign-release.ps1
+            throw 'Signing unexpectedly succeeded without credentials.'
+          } catch {
+            if ($_.Exception.Message -notmatch 'Signing is enabled, but') { throw }
+          }
+
       # Never expose signing credentials to pull_request workflows.
       # Signing is opt-in, and a missing certificate fails the job rather than
       # silently publishing an artifact labeled as signed.
